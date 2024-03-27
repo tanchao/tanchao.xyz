@@ -14,5 +14,3 @@ author:
 
 markdown: kramdown
 pygments: false
-
-plugins: [jekyll-paginate]
