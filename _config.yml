@@ -1,2 +1,18 @@
+# Site settings
+title: tanchao's blog
+email: chaos.tc@gmail.com
+description: > # this means to ignore newlines until "baseurl:"
+    Chao Tan is "Someone Do Everything", an owner and a father.
+baseurl: "" # the subpath of your site, e.g. /blog
+url: "https://tanchao.xyz" 
+github_username: tanchao 
+
+permalink: /:year/:month/:day/:title.html
+
+author:
+  name: Chao Tan
+
 markdown: kramdown
 pygments: false
+
+plugins: [jekyll-paginate]

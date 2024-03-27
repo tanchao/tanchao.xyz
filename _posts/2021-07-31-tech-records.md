@@ -5,8 +5,11 @@ subtitle: who matters in which domain by how at what level
 author: Chao Tan
 date: 2021-07-31 16:10:10 +0800
 categories: career
-tags: career impact
+tags: career
 ---
+
+{{ page.title }}
+================
 
 ## Mission Statement
 * `To be the best API Service owner`, mastered the best practice of API (including the full-stack microservices and data processes behind the scene) design, build and maintainenance.
