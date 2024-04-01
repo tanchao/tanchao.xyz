@@ -19,9 +19,9 @@ Today is just another proud day for me to look at what we invented and delivered
 
 Think hard for customers, make intuitive decisions for customers, even if it sarcrifies the tech complexity.
 
-# Opinionated Tech Leader
+# Opinionated Tech Lead
 
-Make a right decision, support it with right algorithem, accurate user data and experience.
+Make a right choice, by right algorithem, and/or accurate user data, and/or personal (professional) experience.
 
 # Algorithms in practice
 
