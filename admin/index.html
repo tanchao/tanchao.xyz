@@ -1,3 +1,6 @@
+---
+layout: null
+---
 <!DOCTYPE html>
 <html>
   <head>
@@ -9,9 +12,7 @@
     <div id="nc-root"></div>
     <script>
       window.CMS_MANUAL_INIT = false;
-      CMS.init({
-        config: '/admin/config.yml',
-        });
+      if (typeof CMS !== 'undefined') CMS.init();
     </script>
   </body>
 </html>
