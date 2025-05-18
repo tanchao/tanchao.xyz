@@ -1,0 +1,13 @@
+name = "decap-proxy"
+account_id = "d5d7b0b0826eddc94655cce142c30f77"
+compatibility_date = "2024-05-16"
+compatibility_flags = ["nodejs_compat"]
+
+workers_dev = false
+route = { pattern = "decap-proxy.tanchao.xyz", zone_name = "tanchao.xyz", custom_domain = true }
+
+main = "src/index.ts"
+
+[vars]
+REPO = "tanchao/tanchao.xyz"
+GIT_BRANCH = "main"
