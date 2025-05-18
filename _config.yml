@@ -14,3 +14,14 @@ author:
 
 markdown: kramdown
 pygments: false
+
+collections:
+  notes:
+    output: true
+    permalink: /notes/:title/
+
+plugins:
+  - jekyll-feed
+  - jekyll-seo-tag
+
+remote_theme: mmistakes/minimal-mistakes@4.24.0
