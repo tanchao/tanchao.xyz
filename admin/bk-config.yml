@@ -1,12 +1,13 @@
+site_url: https://tanchao.xyz
+
 backend:
   name: github
   repo: tanchao/tanchao.xyz
-  branch: main # Branch to update (optional; defaults to master)
-  site_domain: https://tanchao.xyz
+  branch: main
   base_url: https://decap.tanchao.xyz
-  auth_endpoint: /api/auth
-media_folder: images
-public_folder: images
+
+media_folder: "images/uploads"
+public_folder: "/images/uploads"
 
 collections:
   - name: "notes"
