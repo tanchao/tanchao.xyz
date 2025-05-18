@@ -1,8 +1,10 @@
+site_url: https://tanchao.xyz
+
 backend:
   name: github
   repo: tanchao/tanchao.xyz
   branch: main
-  base_url: https://decap-proxy.tanchao.xyz
+  base_url: https://decap.tanchao.xyz
 
 media_folder: "images/uploads"
 public_folder: "/images/uploads"
