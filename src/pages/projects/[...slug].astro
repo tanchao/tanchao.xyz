@@ -1,0 +1,140 @@
+---
+import { getCollection, render } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import { projectSlug } from "../../lib/posts";
+
+export async function getStaticPaths() {
+  const projects = await getCollection("projects");
+  return projects.map(project => ({
+    params: { slug: projectSlug(project.id) },
+    props: { project },
+  }));
+}
+
+const { project } = Astro.props;
+const { Content, headings } = await render(project);
+
+const { title, description, status, started, updated, tags, repo, link } = project.data;
+
+const statusLabel: Record<string, string> = {
+  active: "Active",
+  paused: "Paused",
+  completed: "Completed",
+  archived: "Archived",
+};
+
+const statusColor: Record<string, string> = {
+  active: "color:var(--link);background:color-mix(in srgb,var(--link) 12%,transparent);",
+  paused: "color:var(--text-muted);background:color-mix(in srgb,var(--text-muted) 12%,transparent);",
+  completed: "color:#4caf7d;background:color-mix(in srgb,#4caf7d 12%,transparent);",
+  archived: "color:var(--text-muted);background:color-mix(in srgb,var(--text-muted) 8%,transparent);",
+};
+
+const startedStr = started.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+const updatedStr = updated?.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+
+// Only h2 headings become the update log TOC (h1 is the title, h3+ are sub-sections)
+const updateHeadings = headings.filter(h => h.depth === 2);
+
+const canonicalUrl = new URL(`/projects/${projectSlug(project.id)}/`, "https://tanchao.xyz").href;
+
+const creativeWorkSchema = {
+  "@context": "https://schema.org",
+  "@type": "CreativeWork",
+  name: title,
+  description: description,
+  dateCreated: started.toISOString(),
+  dateModified: (updated ?? started).toISOString(),
+  author: {
+    "@type": "Person",
+    "@id": "https://tanchao.xyz/#person",
+    name: "Chao Tan",
+  },
+  url: canonicalUrl,
+  keywords: tags.join(", "),
+  inLanguage: "en-US",
+  ...(repo ? { codeRepository: repo } : {}),
+  ...(link ? { url: link } : {}),
+};
+---
+
+<Base
+  title={title}
+  description={description}
+  canonicalUrl={canonicalUrl}
+  type="article"
+  publishedTime={started}
+  updatedTime={updated}
+  tags={tags}
+  jsonLd={creativeWorkSchema}
+>
+
+  <article>
+    <header style="margin-bottom:2rem;">
+      <div style="display:flex;align-items:center;gap:0.625rem;flex-wrap:wrap;margin-bottom:0.625rem;">
+        <h1 style="margin:0;">{title}</h1>
+        <span style={`font-family:var(--font-sans);font-size:0.75rem;font-weight:600;padding:0.2rem 0.6rem;border-radius:999px;${statusColor[status]}`}>
+          {statusLabel[status]}
+        </span>
+      </div>
+
+      {description && (
+        <p style="font-family:var(--font-sans);font-size:0.95rem;color:var(--text-muted);margin:0 0 0.75rem;">
+          {description}
+        </p>
+      )}
+
+      <div style="font-family:var(--font-sans);font-size:0.875rem;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;">
+        <span>Started <time datetime={started.toISOString()}>{startedStr}</time></span>
+        {updatedStr && <span>· Updated <time datetime={updated!.toISOString()}>{updatedStr}</time></span>}
+        {(repo || link) && (
+          <span>·</span>
+        )}
+        {repo && (
+          <a href={repo} rel="noopener" style="font-size:0.875rem;">
+            repo ↗
+          </a>
+        )}
+        {link && (
+          <a href={link} rel="noopener" style="font-size:0.875rem;">
+            link ↗
+          </a>
+        )}
+      </div>
+
+      {tags.length > 0 && (
+        <div style="margin-top:0.75rem;display:flex;flex-wrap:wrap;gap:0.375rem;">
+          {tags.map(tag => (
+            <a href={`/tags/${tag}/`} class="tag-pill">{tag}</a>
+          ))}
+        </div>
+      )}
+    </header>
+
+    {updateHeadings.length > 0 && (
+      <nav
+        aria-label="Update log"
+        style="background:var(--bg-alt);border:1px solid var(--border);border-radius:6px;padding:1rem 1.25rem;margin-bottom:2rem;font-family:var(--font-sans);font-size:0.875rem;"
+      >
+        <p style="margin:0 0 0.5rem;font-weight:600;font-size:0.8rem;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-muted);">
+          Updates
+        </p>
+        <ol style="margin:0;padding-left:1.25rem;">
+          {updateHeadings.map(h => (
+            <li style="margin:0.25rem 0;">
+              <a href={`#${h.slug}`} style="color:var(--text-muted);">{h.text}</a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+    )}
+
+    <div class="prose">
+      <Content />
+    </div>
+  </article>
+
+  <p style="margin-top:2.5rem;font-family:var(--font-sans);font-size:0.875rem;">
+    <a href="/projects/">← All projects</a>
+  </p>
+</Base>

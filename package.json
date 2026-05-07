@@ -14,7 +14,8 @@
     "check:content": "npx tsx scripts/check-content.ts",
     "lint": "biome lint ./src ./scripts",
     "format": "biome format --write ./src ./scripts",
-    "new:post": "npx tsx scripts/new-post.ts"
+    "new:post": "npx tsx scripts/new-post.ts",
+    "new:project": "npx tsx scripts/new-project.ts"
   },
   "dependencies": {
     "@astrojs/mdx": "^5.0.4",

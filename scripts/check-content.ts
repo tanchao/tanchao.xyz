@@ -25,6 +25,18 @@ const noteSchema = z.object({
   draft: z.boolean().default(false),
 });
 
+const projectSchema = z.object({
+  title: z.string().max(80),
+  description: z.string().optional(),
+  status: z.enum(["active", "paused", "completed", "archived"]).default("active"),
+  started: z.coerce.date(),
+  updated: z.coerce.date().optional(),
+  tags: z.array(z.string()).default([]),
+  repo: z.string().url().optional(),
+  link: z.string().url().optional(),
+  draft: z.boolean().default(false),
+});
+
 function parseFrontmatter(content: string): Record<string, unknown> {
   const match = content.match(/^---\n([\s\S]*?)\n---/);
   if (!match) return {};
@@ -71,6 +83,7 @@ function checkDir(dir: string, schema: z.ZodObject<z.ZodRawShape>, label: string
 
 checkDir(join(process.cwd(), "src/content/posts"), postSchema as z.ZodObject<z.ZodRawShape>, "posts");
 checkDir(join(process.cwd(), "src/content/notes"), noteSchema as z.ZodObject<z.ZodRawShape>, "notes");
+checkDir(join(process.cwd(), "src/content/projects"), projectSchema as z.ZodObject<z.ZodRawShape>, "projects");
 
 if (errors === 0) {
   console.log("✅ All content validated successfully.");

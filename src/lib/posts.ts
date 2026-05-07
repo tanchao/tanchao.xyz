@@ -1,5 +1,29 @@
 import type { CollectionEntry } from "astro:content";
 
+export function projectSlug(id: string): string {
+  return id.replace(/\.(md|mdx)$/, "");
+}
+
+export function projectUrl(id: string): string {
+  return `/projects/${projectSlug(id)}/`;
+}
+
+export function sortedProjects(
+  projects: CollectionEntry<"projects">[],
+  includeDrafts = false,
+): CollectionEntry<"projects">[] {
+  const statusRank: Record<string, number> = { active: 0, paused: 1, completed: 2, archived: 3 };
+  return projects
+    .filter((p) => includeDrafts || !p.data.draft)
+    .sort((a, b) => {
+      const s = statusRank[a.data.status] - statusRank[b.data.status];
+      if (s !== 0) return s;
+      const aDate = (a.data.updated ?? a.data.started).getTime();
+      const bDate = (b.data.updated ?? b.data.started).getTime();
+      return bDate - aDate;
+    });
+}
+
 /** Derives URL slug from post ID (filename without extension).
  *  File `2021-07-31-tech-records.md` → slug `2021/07/31/tech-records`
  *  which generates URL `/posts/2021/07/31/tech-records/`

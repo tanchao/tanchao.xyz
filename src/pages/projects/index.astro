@@ -1,0 +1,101 @@
+---
+import Base from "../../layouts/Base.astro";
+import { getCollection } from "astro:content";
+import { projectUrl, sortedProjects } from "../../lib/posts";
+
+const allProjects = await getCollection("projects");
+const projects = sortedProjects(allProjects);
+
+const statusGroups: Record<string, typeof projects> = {
+  active: [],
+  paused: [],
+  completed: [],
+  archived: [],
+};
+for (const p of projects) {
+  statusGroups[p.data.status].push(p);
+}
+
+const statusLabel: Record<string, string> = {
+  active: "Active",
+  paused: "Paused",
+  completed: "Completed",
+  archived: "Archived",
+};
+
+const statusColor: Record<string, string> = {
+  active: "color:var(--link);background:color-mix(in srgb,var(--link) 12%,transparent);",
+  paused: "color:var(--text-muted);background:color-mix(in srgb,var(--text-muted) 12%,transparent);",
+  completed: "color:#4caf7d;background:color-mix(in srgb,#4caf7d 12%,transparent);",
+  archived: "color:var(--text-muted);background:color-mix(in srgb,var(--text-muted) 8%,transparent);",
+};
+
+const visibleGroups = (["active", "paused", "completed", "archived"] as const).filter(
+  s => statusGroups[s].length > 0,
+);
+---
+
+<Base title="Projects" description="Long-running projects and workstreams by Chao Tan.">
+  <h1>Projects</h1>
+  <p style="font-family:var(--font-sans);font-size:0.95rem;color:var(--text-muted);margin-bottom:2.5rem;">
+    Long-running workstreams I keep notes and updates on over time.
+  </p>
+
+  {projects.length === 0 && (
+    <p style="font-family:var(--font-sans);color:var(--text-muted);">No projects yet.</p>
+  )}
+
+  {visibleGroups.map(status => (
+    <section style="margin-bottom:2.5rem;">
+      <h2 style="font-family:var(--font-sans);font-size:0.8rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid var(--border);">
+        {statusLabel[status]}
+      </h2>
+      <ul style="list-style:none;padding:0;margin:0;">
+        {statusGroups[status].map(project => {
+          const displayDate = project.data.updated ?? project.data.started;
+          const dateLabel = project.data.updated ? "updated" : "started";
+          return (
+            <li style="padding:1rem 0;border-bottom:1px solid var(--border);">
+              <div style="display:flex;gap:0.625rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:0.375rem;">
+                <a
+                  href={projectUrl(project.id)}
+                  style="font-family:var(--font-sans);font-size:1rem;font-weight:500;"
+                >
+                  {project.data.title}
+                </a>
+                <span style={`font-family:var(--font-sans);font-size:0.7rem;font-weight:600;padding:0.15rem 0.5rem;border-radius:999px;${statusColor[project.data.status]}`}>
+                  {statusLabel[project.data.status]}
+                </span>
+              </div>
+              {project.data.description && (
+                <p style="font-family:var(--font-sans);font-size:0.9rem;color:var(--text-muted);margin:0 0 0.5rem;">
+                  {project.data.description}
+                </p>
+              )}
+              <div style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;">
+                <time
+                  datetime={displayDate.toISOString()}
+                  style="font-family:var(--font-sans);font-size:0.8rem;color:var(--text-muted);"
+                >
+                  {dateLabel} {displayDate.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                </time>
+                {project.data.tags.length > 0 && (
+                  <span style="color:var(--border);">·</span>
+                )}
+                {project.data.tags.map(tag => (
+                  <a
+                    href={`/tags/${tag}/`}
+                    class="tag-pill"
+                    style="font-size:0.75rem;"
+                  >
+                    {tag}
+                  </a>
+                ))}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  ))}
+</Base>

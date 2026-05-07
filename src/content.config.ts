@@ -24,4 +24,19 @@ const notes = defineCollection({
   }),
 });
 
-export const collections = { posts, notes };
+const projects = defineCollection({
+  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/projects" }),
+  schema: z.object({
+    title: z.string().max(80),
+    description: z.string().optional(),
+    status: z.enum(["active", "paused", "completed", "archived"]).default("active"),
+    started: z.coerce.date(),
+    updated: z.coerce.date().optional(),
+    tags: z.array(z.string()).default([]),
+    repo: z.string().url().optional(),
+    link: z.string().url().optional(),
+    draft: z.boolean().default(false),
+  }),
+});
+
+export const collections = { posts, notes, projects };

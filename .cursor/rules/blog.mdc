@@ -11,8 +11,9 @@ This is a static Astro 6 blog. See AGENTS.md for the full project guide.
 ## Key conventions
 
 - **Framework**: Astro 6, Tailwind CSS v4, TypeScript strict mode
-- **Content**: Posts in `src/content/posts/YYYY-MM-DD-slug.md`, Notes in `src/content/notes/slug.md`
-- **URLs**: Posts resolve to `/posts/YYYY/MM/DD/slug/` via the `postSlug()` helper in `src/lib/posts.ts`
+- **Content**: Posts in `src/content/posts/YYYY-MM-DD-slug.md`, Notes in `src/content/notes/slug.md`, Projects in `src/content/projects/slug.md`
+- **URLs**: Posts → `/posts/YYYY/MM/DD/slug/`, Notes → `/notes/slug/`, Projects → `/projects/slug/`
+- **Helpers**: `postSlug/postUrl`, `noteSlug/noteUrl`, `projectSlug/projectUrl`, `sortedProjects` all live in `src/lib/posts.ts`
 - **Styling**: Use CSS variables (`var(--text)`, `var(--link)`, etc.) defined in `src/styles/global.css` — do NOT hardcode colors
 - **Dark mode**: Controlled by `.dark` class on `<html>` — use CSS variables, not Tailwind `dark:` prefix
 - **No Decap CMS**: Content is authored in the editor and pushed via git
@@ -37,5 +38,7 @@ This is a static Astro 6 blog. See AGENTS.md for the full project guide.
 npm run dev
 npm run build
 npm run check
+npm run check:content
 npm run new:post -- "Title"
+npm run new:project -- "Title"
 ```

@@ -19,9 +19,10 @@ src/
   content/
     posts/          Blog posts as Markdown/MDX (YYYY-MM-DD-slug.md)
     notes/          Short notes as Markdown/MDX
+    projects/       Long-running projects as Markdown (slug.md, append updates over time)
   content.config.ts Content collection schemas (Zod)
   lib/
-    posts.ts        URL slug utilities, readingTime, sortedPosts helpers
+    posts.ts        URL slug utilities, readingTime, sortedPosts, sortedProjects helpers
   layouts/
     Base.astro      Root layout (includes Head, Header, Footer, JSON-LD)
     Post.astro      Blog post layout (prev/next, reading time, tags)
@@ -44,6 +45,9 @@ src/
     notes/
       index.astro   Notes listing
       [...slug].astro Note route
+    projects/
+      index.astro   Projects listing (grouped by status: active → paused → completed → archived)
+      [...slug].astro Project detail (Updates TOC auto-generated from ## headings)
     tags/
       index.astro   All tags
       [tag].astro   Posts for a tag
@@ -62,7 +66,10 @@ public/
 scripts/
   migrate.ts        One-time Jekyll migration script
   new-post.ts       Scaffold a new post file
+  new-project.ts    Scaffold a new project file
   check-content.ts  Fast Zod content validation (no full Astro build needed)
+docs/
+  plans/            Internal planning documents (not rendered on site)
 ```
 
 ## Content schema
@@ -92,12 +99,31 @@ draft: false                 # optional
 ---
 ```
 
+Projects (`src/content/projects/`) frontmatter:
+
+```yaml
+---
+title: "Project Title"       # required, max 80 chars
+description: "..."           # optional, for SEO and listing
+status: active               # required: active | paused | completed | archived
+started: 2026-05-06         # required, YYYY-MM-DD
+updated: 2026-05-13         # optional, YYYY-MM-DD — update when you add a new entry
+tags: ["ml", "snowflake"]   # optional
+repo: "https://github.com/..." # optional
+link: "https://..."          # optional
+draft: false                 # optional
+---
+```
+
+Body convention for projects: append `## YYYY-MM-DD — update title` sections over time. These h2 headings auto-generate the Updates TOC and each gets an anchor permalink.
+
 ## URL structure
 
 | Content type | File pattern | Generated URL |
 |---|---|---|
 | Posts | `src/content/posts/YYYY-MM-DD-slug.md` | `/posts/YYYY/MM/DD/slug/` |
 | Notes | `src/content/notes/slug.md` | `/notes/slug/` |
+| Projects | `src/content/projects/slug.md` | `/projects/slug/` |
 | Tags | auto | `/tags/:tag/` |
 
 Old Jekyll URLs (`/YYYY/MM/DD/slug.html`) are 301-redirected to the new format via `public/_redirects`.
@@ -112,7 +138,8 @@ npm run check        # Astro type check + content schema validation
 npm run check:content # Fast Zod-only content validation (no build)
 npm run lint         # Biome lint
 npm run format       # Biome format (write)
-npm run new:post -- "My Title"  # Scaffold a new post file with today's date
+npm run new:post -- "My Title"     # Scaffold a new post file with today's date
+npm run new:project -- "My Project" # Scaffold a new project file
 ```
 
 ## How to add a post
@@ -123,6 +150,15 @@ npm run new:post -- "My Title"  # Scaffold a new post file with today's date
 4. Change `draft: false` when ready to publish.
 5. Run `npm run check:content` to validate frontmatter.
 6. Commit and push to `main`. Cloudflare Pages auto-builds.
+
+## How to add / update a project
+
+1. Run `npm run new:project -- "Your Project Title"` — creates `src/content/projects/<slug>.md` with `draft: true`.
+2. Fill in `description`, set tags, optionally add `repo` / `link`.
+3. Write the body: start with a `## Overview` section, then dated update entries.
+4. Set `draft: false` when ready to publish.
+5. To add a new update later: append a new `## YYYY-MM-DD — update title` section and bump `updated:` in the frontmatter.
+6. Run `npm run check:content`, commit and push.
 
 ## Constraints (never do these)
 
