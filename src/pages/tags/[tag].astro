@@ -14,9 +14,19 @@ export async function getStaticPaths() {
 
 const { tag } = Astro.params;
 const { posts } = Astro.props;
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: "https://tanchao.xyz/" },
+    { "@type": "ListItem", position: 2, name: "Tags", item: "https://tanchao.xyz/tags/" },
+    { "@type": "ListItem", position: 3, name: tag, item: `https://tanchao.xyz/tags/${tag}/` },
+  ],
+};
 ---
 
-<Base title={`Tag: ${tag}`} description={`Posts tagged "${tag}" on tanchao's blog.`}>
+<Base title={`Tag: ${tag}`} description={`Posts tagged "${tag}" on tanchao's blog.`} jsonLd={breadcrumbSchema}>
   <h1>
     Tag: <span style="color:var(--link);">{tag}</span>
   </h1>

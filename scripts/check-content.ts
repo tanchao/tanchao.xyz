@@ -17,6 +17,7 @@ const postSchema = z.object({
   draft: z.boolean().default(false),
   originalUrl: z.string().optional(),
   canonical: z.string().optional(),
+  image: z.string().optional(),
 });
 
 const noteSchema = z.object({

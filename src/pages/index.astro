@@ -3,6 +3,21 @@ import Base from "../layouts/Base.astro";
 import { getCollection } from "astro:content";
 import { sortedPosts, postUrl } from "../lib/posts";
 
+const websiteSchema = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "@id": "https://tanchao.xyz/#website",
+  name: "tanchao's blog",
+  url: "https://tanchao.xyz",
+  description: "Chao Tan's personal blog on data governance, AI security, and engineering.",
+  author: { "@type": "Person", "@id": "https://tanchao.xyz/#person" },
+  potentialAction: {
+    "@type": "SearchAction",
+    target: { "@type": "EntryPoint", urlTemplate: "https://tanchao.xyz/?q={search_term_string}" },
+    "query-input": "required name=search_term_string",
+  },
+};
+
 const posts = sortedPosts(await getCollection("posts"));
 const recent = posts.slice(0, 10);
 
@@ -16,7 +31,7 @@ for (const post of posts) {
 const years = [...byYear.keys()].sort((a, b) => b - a);
 ---
 
-<Base title="tanchao's blog">
+<Base title="tanchao's blog" jsonLd={websiteSchema}>
   <section style="margin-bottom:3rem;">
     <p style="font-family:var(--font-sans);font-size:1rem;color:var(--text-muted);max-width:55ch;line-height:1.6;">
       I'm <strong style="color:var(--text);">Chao Tan</strong> — data governance and privacy engineer at Snowflake, where I built the classification platform that auto-tags sensitive data at scale. 18 years in the craft, from eBay to HSBC to Amazon Alexa to here. I write about data governance, AI system security, performance engineering, and the honest parts of a career in tech.

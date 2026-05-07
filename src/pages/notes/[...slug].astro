@@ -1,7 +1,7 @@
 ---
 import { getCollection, render } from "astro:content";
 import Base from "../../layouts/Base.astro";
-import { noteSlug, noteUrl } from "../../lib/posts";
+import { noteSlug } from "../../lib/posts";
 
 export async function getStaticPaths() {
   const notes = await getCollection("notes");
@@ -19,9 +19,22 @@ const dateStr = note.data.date.toLocaleDateString("en-US", {
   month: "long",
   day: "numeric",
 });
+
+const noteCanonical = new URL(`/notes/${noteSlug(note.id)}/`, "https://tanchao.xyz").href;
+const blogPostingSchema = {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  headline: note.data.title,
+  datePublished: note.data.date.toISOString(),
+  dateModified: note.data.date.toISOString(),
+  author: { "@type": "Person", "@id": "https://tanchao.xyz/#person", name: "Chao Tan" },
+  url: noteCanonical,
+  isPartOf: { "@type": "Blog", "@id": "https://tanchao.xyz/#website" },
+  inLanguage: "en-US",
+};
 ---
 
-<Base title={note.data.title} type="article" publishedTime={note.data.date}>
+<Base title={note.data.title} type="article" publishedTime={note.data.date} canonicalUrl={noteCanonical} jsonLd={blogPostingSchema}>
   <article>
     <header style="margin-bottom:2rem;">
       <h1>{note.data.title}</h1>

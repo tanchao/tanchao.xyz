@@ -12,6 +12,7 @@ const posts = defineCollection({
     draft: z.boolean().default(false),
     originalUrl: z.string().optional(),
     canonical: z.string().optional(),
+    image: z.string().optional(),
   }),
 });
 

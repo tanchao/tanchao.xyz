@@ -8,10 +8,12 @@ interface Props {
   updated?: Date;
   tags?: string[];
   canonicalUrl?: string;
+  ogImage?: string;
   originalUrl?: string;
   readingTime?: number;
   prevPost?: { title: string; url: string } | null;
   nextPost?: { title: string; url: string } | null;
+  relatedPosts?: { title: string; url: string }[];
 }
 
 const {
@@ -21,10 +23,12 @@ const {
   updated,
   tags = [],
   canonicalUrl,
+  ogImage,
   originalUrl,
   readingTime,
   prevPost,
   nextPost,
+  relatedPosts = [],
 } = Astro.props;
 
 const dateStr = date.toLocaleDateString("en-US", {
@@ -40,6 +44,8 @@ const updatedStr = updated
     })
   : null;
 
+const postUrl = canonicalUrl ?? new URL(Astro.url.pathname, "https://tanchao.xyz").href;
+
 const blogPostingSchema = {
   "@context": "https://schema.org",
   "@type": "BlogPosting",
@@ -52,9 +58,20 @@ const blogPostingSchema = {
     "@id": "https://tanchao.xyz/#person",
     name: "Chao Tan",
   },
-  url: canonicalUrl ?? new URL(Astro.url.pathname, "https://tanchao.xyz").href,
+  url: postUrl,
   keywords: tags.join(", "),
   inLanguage: "en-US",
+  isPartOf: { "@type": "Blog", "@id": "https://tanchao.xyz/#website" },
+};
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Home", item: "https://tanchao.xyz/" },
+    { "@type": "ListItem", position: 2, name: "Posts", item: "https://tanchao.xyz/posts/" },
+    { "@type": "ListItem", position: 3, name: title, item: postUrl },
+  ],
 };
 ---
 
@@ -62,11 +79,12 @@ const blogPostingSchema = {
   title={title}
   description={description}
   canonicalUrl={canonicalUrl}
+  ogImage={ogImage}
   type="article"
   publishedTime={date}
   updatedTime={updated}
   tags={tags}
-  jsonLd={blogPostingSchema}
+  jsonLd={[blogPostingSchema, breadcrumbSchema]}
 >
   <article>
     <header style="margin-bottom:2rem;">
@@ -95,10 +113,28 @@ const blogPostingSchema = {
     </div>
   </article>
 
+  {relatedPosts.length > 0 && (
+    <aside
+      style="margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);font-family:var(--font-sans);"
+      aria-label="Related posts"
+    >
+      <p style="font-size:0.8rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-muted);margin-bottom:0.75rem;">
+        Related
+      </p>
+      <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:0.375rem;">
+        {relatedPosts.map(p => (
+          <li>
+            <a href={p.url} style="font-size:0.9rem;">{p.title}</a>
+          </li>
+        ))}
+      </ul>
+    </aside>
+  )}
+
   {(prevPost || nextPost) && (
     <nav
       aria-label="Post navigation"
-      style="margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:1rem;font-family:var(--font-sans);font-size:0.875rem;"
+      style="margin-top:2rem;padding-top:1.5rem;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:1rem;font-family:var(--font-sans);font-size:0.875rem;"
     >
       <div>
         {prevPost && (

@@ -15,9 +15,10 @@ interface Props {
   updatedTime?: Date;
   tags?: string[];
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+  suppressGlobalPerson?: boolean;
 }
 
-const { jsonLd, ...headProps } = Astro.props;
+const { jsonLd, suppressGlobalPerson, ...headProps } = Astro.props;
 
 const personSchema = {
   "@context": "https://schema.org",
@@ -30,6 +31,8 @@ const personSchema = {
   sameAs: [
     "https://github.com/tanchao",
     "https://twitter.com/chaostan",
+    "https://www.linkedin.com/in/tanchao",
+    "https://substack.com/@sprtn",
   ],
   jobTitle: "Data Governance & Privacy Engineer",
   knowsAbout: [
@@ -55,7 +58,7 @@ const personSchema = {
 <html lang="en">
   <head>
     <Head {...headProps} />
-    <JsonLd schema={personSchema} />
+    {!suppressGlobalPerson && <JsonLd schema={personSchema} />}
     {jsonLd && <JsonLd schema={jsonLd} />}
   </head>
   <body>

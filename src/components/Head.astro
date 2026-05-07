@@ -38,6 +38,9 @@ const fullTitle = title === "tanchao's blog" ? title : `${title} — tanchao's b
 <meta property="og:description" content={description} />
 <meta property="og:url" content={resolvedCanonical} />
 <meta property="og:image" content={resolvedOg} />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="tanchao's blog — data governance · AI security · engineering" />
 <meta property="og:type" content={type} />
 <meta property="og:site_name" content="tanchao's blog" />
 <meta property="og:locale" content="en_US" />
@@ -48,6 +51,7 @@ const fullTitle = title === "tanchao's blog" ? title : `${title} — tanchao's b
 <meta name="twitter:description" content={description} />
 <meta name="twitter:image" content={resolvedOg} />
 <meta name="twitter:site" content="@chaostan" />
+<meta name="twitter:creator" content="@chaostan" />
 
 <!-- Article-specific -->
 {type === "article" && publishedTime && (
@@ -71,8 +75,25 @@ const fullTitle = title === "tanchao's blog" ? title : `${title} — tanchao's b
   title="tanchao's blog RSS Feed"
 />
 
-<!-- Favicon -->
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<!-- Favicon & Icons -->
+<link rel="icon" href="/favicon.ico" sizes="32x32" />
+<link rel="icon" type="image/png" sizes="512x512" href="/favicon-512.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+<!-- Meta -->
+<meta name="author" content="Chao Tan" />
+<meta name="theme-color" content="#171717" media="(prefers-color-scheme: dark)" />
+<meta name="theme-color" content="#fafaf8" media="(prefers-color-scheme: light)" />
+
+<!-- Cloudflare Web Analytics — set CF_ANALYTICS_TOKEN in CF Pages env vars -->
+{import.meta.env.CF_ANALYTICS_TOKEN && (
+  <script
+    is:inline
+    defer
+    src="https://static.cloudflareinsights.com/beacon.min.js"
+    data-cf-beacon={`{"token":"${import.meta.env.CF_ANALYTICS_TOKEN}"}`}
+  />
+)}
 
 <!-- Dark mode script (runs before paint to avoid flash) -->
 <script is:inline>

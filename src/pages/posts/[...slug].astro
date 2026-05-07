@@ -23,6 +23,16 @@ export async function getStaticPaths() {
 const { post, prevPost, nextPost } = Astro.props;
 const { Content, remarkPluginFrontmatter, headings } = await render(post);
 const rt = readingTime(post.body ?? "");
+
+const allPosts = sortedPosts(await getCollection("posts"));
+const currentTags = new Set(post.data.tags);
+const relatedPosts = allPosts
+  .filter(p => p.id !== post.id)
+  .map(p => ({ post: p, shared: p.data.tags.filter(t => currentTags.has(t)).length }))
+  .filter(r => r.shared > 0)
+  .sort((a, b) => b.shared - a.shared)
+  .slice(0, 3)
+  .map(r => ({ title: r.post.data.title, url: postUrl(r.post.id) }));
 ---
 
 <Post
@@ -32,10 +42,12 @@ const rt = readingTime(post.body ?? "");
   updated={post.data.updated}
   tags={post.data.tags}
   canonicalUrl={post.data.canonical}
+  ogImage={post.data.image}
   originalUrl={post.data.originalUrl}
   readingTime={rt}
   prevPost={prevPost}
   nextPost={nextPost}
+  relatedPosts={relatedPosts}
 >
   <Content />
 </Post>
