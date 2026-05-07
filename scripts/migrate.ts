@@ -93,7 +93,7 @@ for (const file of files) {
 
   // Parse date from filename
   const dateMatch = file.match(/^(\d{4}-\d{2}-\d{2})/);
-  const date = dateMatch ? dateMatch[1] : fm.date ?? "2020-01-01";
+  const date = dateMatch ? dateMatch[1] : String(fm.date ?? "2020-01-01");
 
   // Build tags from both tags and categories
   const rawTags = String(fm.tags ?? "").split(/[\s,]+/).filter(Boolean);
