@@ -15,7 +15,8 @@
     "lint": "biome lint ./src ./scripts",
     "format": "biome format --write ./src ./scripts",
     "new:post": "npx tsx scripts/new-post.ts",
-    "new:project": "npx tsx scripts/new-project.ts"
+    "new:project": "npx tsx scripts/new-project.ts",
+    "sync:substack": "npx tsx scripts/sync-substack.ts"
   },
   "dependencies": {
     "@astrojs/mdx": "^5.0.4",
@@ -29,9 +30,12 @@
     "@astrojs/check": "^0.9.9",
     "@astrojs/rss": "^4.0.18",
     "@biomejs/biome": "^2.4.14",
+    "@types/turndown": "^5.0.6",
     "expressive-code": "^0.42.0",
+    "fast-xml-parser": "^5.7.3",
     "pagefind": "^1.5.2",
     "tsx": "^4.21.0",
+    "turndown": "^7.2.4",
     "typescript": "^6.0.3",
     "zod": "^4.4.3"
   }

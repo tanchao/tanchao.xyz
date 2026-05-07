@@ -20,7 +20,7 @@ const dateStr = note.data.date.toLocaleDateString("en-US", {
   day: "numeric",
 });
 
-const noteCanonical = new URL(`/notes/${noteSlug(note.id)}/`, "https://tanchao.xyz").href;
+const noteCanonical = note.data.sourceUrl ?? new URL(`/notes/${noteSlug(note.id)}/`, "https://tanchao.xyz").href;
 const blogPostingSchema = {
   "@context": "https://schema.org",
   "@type": "BlogPosting",
@@ -44,6 +44,17 @@ const blogPostingSchema = {
       >
         {dateStr}
       </time>
+      {note.data.sourceUrl && (
+        <div style="margin-top:0.5rem;">
+          <a
+            href={note.data.sourceUrl}
+            rel="noopener noreferrer"
+            style="font-family:var(--font-sans);font-size:0.85rem;color:var(--text-muted);"
+          >
+            Originally posted on Substack ↗
+          </a>
+        </div>
+      )}
     </header>
     <div class="prose">
       <Content />

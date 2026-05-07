@@ -22,6 +22,9 @@ const notes = defineCollection({
     title: z.string(),
     date: z.coerce.date(),
     draft: z.boolean().default(false),
+    source: z.enum(["substack"]).optional(),
+    sourceUrl: z.string().url().optional(),
+    sourceId: z.string().optional(),
   }),
 });
 

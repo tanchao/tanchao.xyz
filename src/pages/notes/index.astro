@@ -29,6 +29,9 @@ const notes = (await getCollection("notes"))
             {note.data.date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
           </time>
           <a href={noteUrl(note.id)}>{note.data.title}</a>
+          {note.data.source === "substack" && (
+            <span style="font-family:var(--font-sans);font-size:0.75rem;color:var(--text-muted);white-space:nowrap;">Substack</span>
+          )}
         </div>
       </li>
     ))}
