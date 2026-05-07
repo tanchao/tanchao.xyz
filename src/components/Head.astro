@@ -95,13 +95,17 @@ const fullTitle = title === "tanchao's blog" ? title : `${title} — tanchao's b
   />
 )}
 
-<!-- Dark mode script (runs before paint to avoid flash) -->
+<!-- Theme script (runs before paint to avoid flash) -->
 <script is:inline>
   (function () {
-    const stored = localStorage.getItem("theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    if (stored === "dark" || (!stored && prefersDark)) {
-      document.documentElement.classList.add("dark");
+    var THEMES = ["light", "dark", "sepia", "solarized", "nord"];
+    var stored = localStorage.getItem("theme");
+    var theme;
+    if (stored && THEMES.indexOf(stored) !== -1) {
+      theme = stored;
+    } else {
+      theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     }
+    document.documentElement.setAttribute("data-theme", theme);
   })();
 </script>
