@@ -12,7 +12,7 @@ export const GET: APIRoute = async () => {
     "",
     "# tanchao.xyz",
     "",
-    "> Chao Tan (tc) is a senior software engineer at Snowflake working on data privacy and governance. Former Amazon Alexa tech lead. Writes about distributed systems, API design, performance engineering, and career development.",
+    "> Chao Tan (tc) is a data governance and privacy engineer with 18 years of experience building and securing large-scale systems. Currently at Snowflake, where he built the data classification platform that auto-tags sensitive data across the cloud. Previously tech lead at Amazon Alexa (14-person team, 100k+ TPS services). Writes about data governance, AI system security, performance engineering, and the honest parts of a career in tech.",
     "",
     "## About",
     "",
