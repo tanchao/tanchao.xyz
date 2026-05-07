@@ -165,32 +165,77 @@ npm run new:project -- "My Project" # Scaffold a new project file
 
 ## Git workflow
 
-`main` is the default and production branch. It has branch protection rules:
+### Branch protection
 
-- All changes **must** go through a pull request (direct push to `main` is rejected).
-- A required status check (`build`) must pass before merge.
+`main` is the default and production branch. Branch protection enforces:
 
-### Before making changes
+- All changes **must** go through a pull request (direct push is rejected).
+- Required status check: `build` must pass before merge.
+- No force-push allowed.
 
-1. **Pull latest `main`**: `git pull origin main`.
-2. **Check current branch**: If you're already on a feature branch, check if it has an open PR (`gh pr view`). If the PR is merged, do NOT reuse the branch — create a new one from `main`.
-3. **Create a new branch** from `main` for each change: `git checkout -b <type>/<short-description>`.
+### Branch naming
 
-### Submitting changes
+Use prefixed branch names: `<type>/<short-kebab-description>`
 
-1. Commit on the feature branch.
-2. Push: `git push -u origin HEAD`.
-3. Create a PR: `gh pr create --title "..." --body "..."`.
-4. **Stay on the feature branch** — do NOT switch back to `main`. Let the user switch when ready.
-5. Wait for CI (`build` check) to pass, then merge.
+| Prefix | Use for |
+|--------|---------|
+| `feat/` | New features or pages |
+| `fix/` | Bug fixes |
+| `chore/` | Maintenance, config, dependency updates |
+| `docs/` | Documentation-only changes |
+| `refactor/` | Code restructuring without behavior change |
 
-### Rules
+### Starting work
 
-- **Never push directly to `main`** — it will be rejected by branch protection.
-- **Never force-push to `main`**.
+1. **Check current branch state first**:
+   - Run `git branch` to see where you are.
+   - If on a feature branch, run `gh pr view` to check if it has a PR and whether it's merged.
+   - If the PR is merged or closed, switch to `main` — never reuse a merged branch.
+2. **Sync main**: `git checkout main && git pull origin main`.
+3. **Create a new branch**: `git checkout -b <type>/<short-description>`.
+
+### Committing
+
+- Write commit messages that explain **why**, not what (the diff shows what).
+- First line: imperative mood, max ~72 chars (e.g., "Fix Turnstile using test key in production").
+- Optional body after blank line for context, separated reasoning, or references.
+- Keep commits atomic — one logical change per commit.
+- Reference issues when relevant: `Closes #N` or `Fixes #N`.
+
+### Submitting a PR
+
+1. Push: `git push -u origin HEAD`.
+2. Create PR: `gh pr create --title "..." --body "..."`.
+3. **Stay on the feature branch** — do NOT switch back to `main`. The user's editor shows the branch files; switching reverts them and causes confusion.
+4. Wait for CI to pass. If it fails, fix on the same branch and push again.
+
+### After PR is created
+
+- If you need to make follow-up changes to the **same** PR: commit and push to the same branch.
+- If you need to make an **unrelated** change: ask the user first, or create a new branch from `main`.
+- Never pile unrelated changes into an existing PR.
+
+### After PR is merged
+
+- Do NOT auto-clean-up. Let the user decide when to switch back to `main`.
+- When starting new work, go back to "Starting work" above.
+
+### Rules (hard constraints)
+
+- **Never push directly to `main`** — branch protection will reject it.
+- **Never force-push** to any shared branch.
 - **Never reuse a merged branch** — always create a fresh branch from up-to-date `main`.
-- **Never auto-switch to `main` after creating a PR** — stay on the working branch so the user can see the changes in their editor.
-- **One logical change per PR** — keep PRs small and focused.
+- **Never auto-switch to `main`** after creating/pushing — stay on the working branch.
+- **Never amend or rebase commits that have been pushed** unless explicitly asked.
+- **One logical change per PR** — if a task involves unrelated changes, split into separate PRs.
+
+### Pre-push checklist
+
+Before pushing, verify locally where applicable:
+
+- `npm run check:content` — if content files were modified
+- `npm run build` — if templates, components, or config were modified
+- `npm run lint` — if any source file was modified
 
 ## Constraints (never do these)
 
