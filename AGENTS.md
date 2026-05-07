@@ -181,13 +181,15 @@ npm run new:project -- "My Project" # Scaffold a new project file
 1. Commit on the feature branch.
 2. Push: `git push -u origin HEAD`.
 3. Create a PR: `gh pr create --title "..." --body "..."`.
-4. Wait for CI (`build` check) to pass, then merge.
+4. **Stay on the feature branch** — do NOT switch back to `main`. Let the user switch when ready.
+5. Wait for CI (`build` check) to pass, then merge.
 
 ### Rules
 
 - **Never push directly to `main`** — it will be rejected by branch protection.
 - **Never force-push to `main`**.
 - **Never reuse a merged branch** — always create a fresh branch from up-to-date `main`.
+- **Never auto-switch to `main` after creating a PR** — stay on the working branch so the user can see the changes in their editor.
 - **One logical change per PR** — keep PRs small and focused.
 
 ## Constraints (never do these)
