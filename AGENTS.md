@@ -1,3 +1,4 @@
+<!-- hello -->
 # AGENTS.md — AI Agent Guide for tanchao.xyz
 
 This file is the single source of truth for AI coding agents (Claude Code, Cursor, Copilot, etc.)
