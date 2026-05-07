@@ -38,6 +38,7 @@ src/
     now.astro       /now page (nownownow.com convention)
     uses.astro      Tools and tech stack
     hire-me.astro   Career page with structured data for recruiting bots
+    feedback.astro  Feedback form (pairs with functions/api/feedback.ts)
     404.astro       Not found
     posts/
       index.astro   All posts listing
@@ -62,7 +63,11 @@ src/
 public/
   _redirects        Cloudflare Pages URL redirects (preserves old Jekyll URLs)
   humans.txt
-  favicon.svg
+  favicon.ico
+  favicon-32.png
+  favicon-512.png
+  apple-touch-icon.png
+  og-default.png
 functions/
   api/
     feedback.ts     CF Pages Function: Turnstile + rate-limit + GitHub Issues API
@@ -70,6 +75,7 @@ scripts/
   migrate.ts        One-time Jekyll migration script
   new-post.ts       Scaffold a new post file
   new-project.ts    Scaffold a new project file
+  sync-substack.ts  Fetch Substack RSS and write notes to src/content/notes/
   check-content.ts  Fast Zod content validation (no full Astro build needed)
 docs/
   plans/            Internal planning documents (not rendered on site)
@@ -89,6 +95,7 @@ tags: ["career", "api"]      # optional array
 draft: true                  # optional; draft posts excluded from production build
 originalUrl: "https://..."   # optional; original URL if migrated from old blog
 canonical: "https://..."     # optional; canonical URL if content exists elsewhere
+image: "/path/to/image.png"  # optional; OG image override for this post
 ---
 ```
 
@@ -99,8 +106,13 @@ Notes (`src/content/notes/`) frontmatter:
 title: "Note title"          # required
 date: 2025-05-17             # required
 draft: false                 # optional
+source: substack             # optional; set by sync-substack.ts — do not set manually
+sourceUrl: "https://..."     # optional; original URL on the source platform
+sourceId: "abc123"           # optional; platform-specific ID for deduplication
 ---
 ```
+
+Syndicated notes (imported from Substack via `npm run sync:substack`) have `source`, `sourceUrl`, and `sourceId` set automatically. Do not set these fields on hand-written notes.
 
 Projects (`src/content/projects/`) frontmatter:
 
@@ -108,12 +120,12 @@ Projects (`src/content/projects/`) frontmatter:
 ---
 title: "Project Title"       # required, max 80 chars
 description: "..."           # optional, for SEO and listing
-status: active               # required: active | paused | completed | archived
+status: active               # optional, defaults to "active": active | paused | completed | archived
 started: 2026-05-06         # required, YYYY-MM-DD
 updated: 2026-05-13         # optional, YYYY-MM-DD — update when you add a new entry
-tags: ["ml", "snowflake"]   # optional
-repo: "https://github.com/..." # optional
-link: "https://..."          # optional
+tags: ["ml", "snowflake"]   # optional, defaults to []
+repo: "https://github.com/..." # optional, must be a valid URL when set
+link: "https://..."          # optional, must be a valid URL when set
 draft: false                 # optional
 ---
 ```
@@ -143,6 +155,7 @@ npm run lint         # Biome lint
 npm run format       # Biome format (write)
 npm run new:post -- "My Title"     # Scaffold a new post file with today's date
 npm run new:project -- "My Project" # Scaffold a new project file
+npm run sync:substack               # Fetch Substack RSS and import new notes (also runs nightly via CI)
 ```
 
 ## How to add a post
@@ -256,6 +269,30 @@ Theme variables are in `src/styles/global.css` as CSS custom properties on `:roo
 - `--link`, `--link-hover` — link color (accent green)
 
 Dark mode is toggled by adding/removing the `dark` class on `<html>`. The preference is stored in `localStorage.theme`. An inline script in `Head.astro` applies the class before first paint (no flash).
+
+## Cloudflare Pages — environment variables
+
+Understanding the two env contexts prevents a common class of bugs:
+
+| Context | Set via | Visible to |
+|---------|---------|------------|
+| **Build-time** (`PUBLIC_*` vars) | CF Pages dashboard → Settings → Environment variables, or `wrangler.toml` | Astro templates and static HTML (baked in at build) |
+| **Runtime** (Pages Functions) | CF Pages dashboard → Settings → Environment variables (as secrets) | `functions/api/*.ts` only — never baked into HTML |
+
+**Key rules:**
+- `PUBLIC_*` variables (e.g. `PUBLIC_TURNSTILE_SITE_KEY`) are embedded in HTML at build time. Changing them requires a redeploy.
+- Secrets for Pages Functions (`TURNSTILE_SECRET`, `GITHUB_TOKEN`, `KV_RATE_LIMIT` binding) are set in the CF dashboard and never go in `wrangler.toml` or git.
+- After changing any binding or environment variable in the CF dashboard, trigger a **manual redeploy** — existing deployments do not pick up the change automatically.
+- `wrangler.toml` configures KV namespace IDs and compatibility settings only. Do not put secret values there.
+
+## Cursor rules
+
+Project-local Cursor rules live under `.cursor/rules/`:
+
+- `blog.mdc` — always-applied global rules pointing agents to this file
+- `content.mdc` — rules scoped to `src/content/**` files (frontmatter conventions)
+
+These rules are applied automatically by Cursor and do not need to be invoked manually. AGENTS.md is the authoritative source; the rules files summarize the most critical points.
 
 ## Deploy flow
 

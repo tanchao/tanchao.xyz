@@ -1,7 +1,28 @@
 # Content Syndication Plan (PESOS)
 
-Status: **planned**
+Status: **done** (Substack); Bluesky deferred
 Created: 2026-05-06
+Shipped: 2026-05-07
+
+## Shipped — divergences from plan
+
+The Substack sync pipeline is fully implemented. The shipped version differs from the plan in the following ways:
+
+| Plan | Shipped |
+|------|---------|
+| `source` enum: `"substack" \| "bluesky" \| "twitter"` | `source` enum: `"substack"` only (expand when Bluesky/Twitter added) |
+| Schema fields: `source`, `sourceUrl` | Schema fields: `source`, `sourceUrl`, **and `sourceId`** (for deduplication) |
+| Cron: `0 6 * * *` (6am UTC) | Cron: `0 13 * * *` (6am PT / 1pm UTC) |
+| Bot identity: `github-actions[bot]` | Bot identity: `substack-sync-bot` / `bot@tanchao.xyz` |
+| Commit message: `sync: import Substack notes [skip ci]` | Commit message: `chore(notes): sync Substack notes [skip ci]` |
+
+## Remaining: Bluesky (deferred)
+
+When you start posting on Bluesky, add sync via the AT Protocol API:
+
+1. Expand `source` enum in `src/content.config.ts` to include `"bluesky"`
+2. Add `scripts/sync-bluesky.ts` modeled after `sync-substack.ts`
+3. Add a `sync:bluesky` npm script and new workflow (or extend `sync-substack.yml`)
 
 ## Goal
 
