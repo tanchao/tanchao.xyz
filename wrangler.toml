@@ -7,9 +7,4 @@ pages_build_output_dir = "dist"
 
 [vars]
 NODE_VERSION = "22"
-
-[env.production]
-name = "tanchao-xyz"
-
-[env.production.vars]
-NODE_VERSION = "22"
+PUBLIC_TURNSTILE_SITE_KEY = "0x4AAAAAADK3m_I_UUwsndTC"
