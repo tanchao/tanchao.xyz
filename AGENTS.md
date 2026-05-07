@@ -152,7 +152,7 @@ npm run new:project -- "My Project" # Scaffold a new project file
 3. Fill in `description` and the body.
 4. Change `draft: false` when ready to publish.
 5. Run `npm run check:content` to validate frontmatter.
-6. Commit and push to `main`. Cloudflare Pages auto-builds.
+6. Commit, push branch, and open a PR. Cloudflare Pages auto-builds on merge to `main`.
 
 ## How to add / update a project
 
@@ -161,11 +161,84 @@ npm run new:project -- "My Project" # Scaffold a new project file
 3. Write the body: start with a `## Overview` section, then dated update entries.
 4. Set `draft: false` when ready to publish.
 5. To add a new update later: append a new `## YYYY-MM-DD — update title` section and bump `updated:` in the frontmatter.
-6. Run `npm run check:content`, commit and push.
+6. Run `npm run check:content`, commit, push branch, and open a PR.
+
+## Git workflow
+
+### Branch protection
+
+`main` is the default and production branch. Branch protection enforces:
+
+- All changes **must** go through a pull request (direct push is rejected).
+- Required status check: `build` must pass before merge.
+- No force-push allowed.
+
+### Branch naming
+
+Use prefixed branch names: `<type>/<short-kebab-description>`
+
+| Prefix | Use for |
+|--------|---------|
+| `feat/` | New features or pages |
+| `fix/` | Bug fixes |
+| `chore/` | Maintenance, config, dependency updates |
+| `docs/` | Documentation-only changes |
+| `refactor/` | Code restructuring without behavior change |
+
+### Starting work
+
+1. **Check current branch state first**:
+   - Run `git branch` to see where you are.
+   - If on a feature branch, run `gh pr view` to check if it has a PR and whether it's merged.
+   - If the PR is merged or closed, switch to `main` — never reuse a merged branch.
+2. **Sync main**: `git checkout main && git pull origin main`.
+3. **Create a new branch**: `git checkout -b <type>/<short-description>`.
+
+### Committing
+
+- Write commit messages that explain **why**, not what (the diff shows what).
+- First line: imperative mood, max ~72 chars (e.g., "Fix Turnstile using test key in production").
+- Optional body after blank line for context, separated reasoning, or references.
+- Keep commits atomic — one logical change per commit.
+- Reference issues when relevant: `Closes #N` or `Fixes #N`.
+
+### Submitting a PR
+
+1. Push: `git push -u origin HEAD`.
+2. Create PR: `gh pr create --title "..." --body "..."`.
+3. **Stay on the feature branch** — do NOT switch back to `main`. The user's editor shows the branch files; switching reverts them and causes confusion.
+4. Wait for CI to pass. If it fails, fix on the same branch and push again.
+
+### After PR is created
+
+- If you need to make follow-up changes to the **same** PR: commit and push to the same branch.
+- If you need to make an **unrelated** change: ask the user first, or create a new branch from `main`.
+- Never pile unrelated changes into an existing PR.
+
+### After PR is merged
+
+- Do NOT auto-clean-up. Let the user decide when to switch back to `main`.
+- When starting new work, go back to "Starting work" above.
+
+### Rules (hard constraints)
+
+- **Never push directly to `main`** — branch protection will reject it.
+- **Never force-push** to any shared branch.
+- **Never reuse a merged branch** — always create a fresh branch from up-to-date `main`.
+- **Never auto-switch to `main`** after creating/pushing — stay on the working branch.
+- **Never amend or rebase commits that have been pushed** unless explicitly asked.
+- **One logical change per PR** — if a task involves unrelated changes, split into separate PRs.
+
+### Pre-push checklist
+
+Before pushing, verify locally where applicable:
+
+- `npm run check:content` — if content files were modified
+- `npm run build` — if templates, components, or config were modified
+- `npm run lint` — if any source file was modified
 
 ## Constraints (never do these)
 
-- **Never force-push to `main`**. All changes go through commits (direct push to main is fine, but no `--force`).
 - **Never edit `public/_redirects` without testing** the redirect still works — this file keeps old URLs alive.
 - **Never delete `src/content/posts/` files** without adding a redirect in `public/_redirects`.
 - **Never add secrets or API keys** to any file tracked in git.
@@ -186,6 +259,6 @@ Dark mode is toggled by adding/removing the `dark` class on `<html>`. The prefer
 
 ## Deploy flow
 
-`git push origin main` → GitHub webhook → Cloudflare Pages → `npm run build` → live at https://tanchao.xyz
+Merge PR to `main` → GitHub webhook → Cloudflare Pages → `npm run build` → live at https://tanchao.xyz
 
 Preview deployments are created automatically for every branch/PR by Cloudflare Pages.
