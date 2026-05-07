@@ -8,3 +8,7 @@ pages_build_output_dir = "dist"
 [vars]
 NODE_VERSION = "22"
 PUBLIC_TURNSTILE_SITE_KEY = "0x4AAAAAADK3m_I_UUwsndTC"
+
+[[kv_namespaces]]
+binding = "KV_RATE_LIMIT"
+id = "20ee375c8cc540ec9341948587da6a56"
