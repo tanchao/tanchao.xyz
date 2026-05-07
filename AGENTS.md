@@ -63,6 +63,9 @@ public/
   _redirects        Cloudflare Pages URL redirects (preserves old Jekyll URLs)
   humans.txt
   favicon.svg
+functions/
+  api/
+    feedback.ts     CF Pages Function: Turnstile + rate-limit + GitHub Issues API
 scripts/
   migrate.ts        One-time Jekyll migration script
   new-post.ts       Scaffold a new post file
@@ -168,6 +171,7 @@ npm run new:project -- "My Project" # Scaffold a new project file
 - **Never add secrets or API keys** to any file tracked in git.
 - **Never import server-only packages** in `.astro` frontmatter that runs client-side.
 - **Slug rules**: filenames must match `YYYY-MM-DD-kebab-case-slug.md`. Never use spaces or uppercase.
+- **Never modify `.github/workflows/claude-agent.yml`**, `functions/api/feedback.ts`, or any secrets/environment variables. These define the trust boundary for automated agents.
 
 ## Design system
 

@@ -30,6 +30,7 @@
     "@astrojs/check": "^0.9.9",
     "@astrojs/rss": "^4.0.18",
     "@biomejs/biome": "^2.4.14",
+    "@cloudflare/workers-types": "^4.20260507.1",
     "@types/turndown": "^5.0.6",
     "expressive-code": "^0.42.0",
     "fast-xml-parser": "^5.7.3",

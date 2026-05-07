@@ -1,0 +1,131 @@
+---
+import Base from "../layouts/Base.astro";
+
+const TURNSTILE_SITE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA";
+---
+
+<Base
+  title="Feedback"
+  description="Suggest an improvement or report an issue with tanchao.xyz. Your feedback triggers an automated investigation."
+>
+  <h1>Suggest an improvement</h1>
+
+  <div class="prose">
+    <p>
+      Found a typo? Have an idea for a post? Something broken? Let me know.
+      Submitting this form opens an issue that an AI agent investigates and
+      may open a pull request — but nothing ships without my approval.
+    </p>
+  </div>
+
+  <form
+    id="feedback-form"
+    method="POST"
+    action="/api/feedback"
+    style="max-width:65ch;margin-top:1.5rem;"
+  >
+    <input type="hidden" name="referrer" id="referrer-field" value="" />
+
+    <div style="margin-bottom:1.25rem;">
+      <label
+        for="body"
+        style="display:block;font-family:var(--font-sans);font-size:0.9rem;font-weight:500;margin-bottom:0.4rem;color:var(--text);"
+      >
+        What's on your mind? <span style="color:var(--text-muted);">*</span>
+      </label>
+      <textarea
+        id="body"
+        name="body"
+        required
+        minlength="5"
+        maxlength="2000"
+        rows="6"
+        placeholder="e.g. The code block on your privacy filter post has a typo in line 3…"
+        style="width:100%;padding:0.75rem;font-family:var(--font-serif);font-size:1rem;line-height:1.6;background:var(--bg-alt);border:1px solid var(--border);border-radius:6px;color:var(--text);resize:vertical;"
+      ></textarea>
+      <p style="font-family:var(--font-sans);font-size:0.8rem;color:var(--text-muted);margin:0.25rem 0 0;">
+        5–2000 characters
+      </p>
+    </div>
+
+    <div style="margin-bottom:1.25rem;">
+      <label
+        for="contact"
+        style="display:block;font-family:var(--font-sans);font-size:0.9rem;font-weight:500;margin-bottom:0.4rem;color:var(--text);"
+      >
+        Contact <span style="color:var(--text-muted);">(optional)</span>
+      </label>
+      <input
+        id="contact"
+        name="contact"
+        type="text"
+        maxlength="120"
+        placeholder="email or @handle if you'd like a reply"
+        style="width:100%;padding:0.6rem 0.75rem;font-family:var(--font-sans);font-size:0.95rem;background:var(--bg-alt);border:1px solid var(--border);border-radius:6px;color:var(--text);"
+      />
+    </div>
+
+    <div style="margin-bottom:1.5rem;" class="cf-turnstile" data-sitekey={TURNSTILE_SITE_KEY}></div>
+
+    <button
+      type="submit"
+      style="font-family:var(--font-sans);font-size:0.95rem;font-weight:500;padding:0.6rem 1.5rem;background:var(--link);color:#fff;border:none;border-radius:6px;cursor:pointer;transition:background 0.15s ease;"
+      onmouseover="this.style.background='var(--link-hover)'"
+      onmouseout="this.style.background='var(--link)'"
+    >
+      Send feedback
+    </button>
+  </form>
+
+  <div
+    id="success-message"
+    style="display:none;max-width:65ch;margin-top:1.5rem;padding:1rem 1.25rem;background:var(--bg-alt);border:1px solid var(--border);border-radius:6px;"
+  >
+    <p style="font-family:var(--font-sans);font-size:0.95rem;color:var(--text);margin:0;">
+      Thank you! Your feedback has been received. I'll take a look.
+    </p>
+  </div>
+
+  <div
+    id="error-message"
+    style="display:none;max-width:65ch;margin-top:1rem;padding:0.75rem 1rem;border:1px solid #dc2626;border-radius:6px;background:#fef2f2;"
+  >
+    <p style="font-family:var(--font-sans);font-size:0.9rem;color:#dc2626;margin:0;" id="error-text"></p>
+  </div>
+
+  <script is:inline src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+
+  <script is:inline>
+    document.getElementById("referrer-field").value = document.referrer || window.location.href;
+
+    document.getElementById("feedback-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const btn = form.querySelector("button[type=submit]");
+      const errDiv = document.getElementById("error-message");
+      const errText = document.getElementById("error-text");
+      const successDiv = document.getElementById("success-message");
+
+      btn.disabled = true;
+      btn.textContent = "Sending…";
+      errDiv.style.display = "none";
+
+      try {
+        const res = await fetch("/api/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(Object.fromEntries(new FormData(form))),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Something went wrong");
+        form.style.display = "none";
+        successDiv.style.display = "block";
+      } catch (err) {
+        errText.textContent = err.message;
+        errDiv.style.display = "block";
+        btn.disabled = false;
+        btn.textContent = "Send feedback";
+      }
+    });
+  </script>
+</Base>
