@@ -152,7 +152,7 @@ npm run new:project -- "My Project" # Scaffold a new project file
 3. Fill in `description` and the body.
 4. Change `draft: false` when ready to publish.
 5. Run `npm run check:content` to validate frontmatter.
-6. Commit and push to `main`. Cloudflare Pages auto-builds.
+6. Commit, push branch, and open a PR. Cloudflare Pages auto-builds on merge to `main`.
 
 ## How to add / update a project
 
@@ -161,11 +161,37 @@ npm run new:project -- "My Project" # Scaffold a new project file
 3. Write the body: start with a `## Overview` section, then dated update entries.
 4. Set `draft: false` when ready to publish.
 5. To add a new update later: append a new `## YYYY-MM-DD — update title` section and bump `updated:` in the frontmatter.
-6. Run `npm run check:content`, commit and push.
+6. Run `npm run check:content`, commit, push branch, and open a PR.
+
+## Git workflow
+
+`main` is the default and production branch. It has branch protection rules:
+
+- All changes **must** go through a pull request (direct push to `main` is rejected).
+- A required status check (`build`) must pass before merge.
+
+### Before making changes
+
+1. **Pull latest `main`**: `git pull origin main`.
+2. **Check current branch**: If you're already on a feature branch, check if it has an open PR (`gh pr view`). If the PR is merged, do NOT reuse the branch — create a new one from `main`.
+3. **Create a new branch** from `main` for each change: `git checkout -b <type>/<short-description>`.
+
+### Submitting changes
+
+1. Commit on the feature branch.
+2. Push: `git push -u origin HEAD`.
+3. Create a PR: `gh pr create --title "..." --body "..."`.
+4. Wait for CI (`build` check) to pass, then merge.
+
+### Rules
+
+- **Never push directly to `main`** — it will be rejected by branch protection.
+- **Never force-push to `main`**.
+- **Never reuse a merged branch** — always create a fresh branch from up-to-date `main`.
+- **One logical change per PR** — keep PRs small and focused.
 
 ## Constraints (never do these)
 
-- **Never force-push to `main`**. All changes go through commits (direct push to main is fine, but no `--force`).
 - **Never edit `public/_redirects` without testing** the redirect still works — this file keeps old URLs alive.
 - **Never delete `src/content/posts/` files** without adding a redirect in `public/_redirects`.
 - **Never add secrets or API keys** to any file tracked in git.
@@ -186,6 +212,6 @@ Dark mode is toggled by adding/removing the `dark` class on `<html>`. The prefer
 
 ## Deploy flow
 
-`git push origin main` → GitHub webhook → Cloudflare Pages → `npm run build` → live at https://tanchao.xyz
+Merge PR to `main` → GitHub webhook → Cloudflare Pages → `npm run build` → live at https://tanchao.xyz
 
 Preview deployments are created automatically for every branch/PR by Cloudflare Pages.
