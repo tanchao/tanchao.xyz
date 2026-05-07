@@ -1,0 +1,57 @@
+---
+import Base from "../layouts/Base.astro";
+import { getCollection } from "astro:content";
+import { sortedPosts, postUrl } from "../lib/posts";
+
+const posts = sortedPosts(await getCollection("posts"));
+const recent = posts.slice(0, 10);
+
+// Group remaining by year for the full list
+const byYear = new Map<number, typeof posts>();
+for (const post of posts) {
+  const year = post.data.date.getFullYear();
+  if (!byYear.has(year)) byYear.set(year, []);
+  byYear.get(year)!.push(post);
+}
+const years = [...byYear.keys()].sort((a, b) => b - a);
+---
+
+<Base title="tanchao's blog">
+  <section style="margin-bottom:3rem;">
+    <p style="font-family:var(--font-sans);font-size:1rem;color:var(--text-muted);max-width:55ch;line-height:1.6;">
+      I'm <strong style="color:var(--text);">Chao Tan</strong>, a senior software engineer at Snowflake working on data privacy and governance. Former Amazon Alexa. I write about engineering, performance, career, and life.
+    </p>
+    <p style="font-family:var(--font-sans);font-size:0.9rem;color:var(--text-muted);margin-top:0.5rem;">
+      <a href="/about/">More about me →</a>
+    </p>
+  </section>
+
+  <section>
+    {years.map(year => (
+      <div style="margin-bottom:2rem;">
+        <h2 style="font-family:var(--font-sans);font-size:1rem;font-weight:600;color:var(--text-muted);margin:0 0 0.75rem;letter-spacing:0.05em;text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:0.375rem;">
+          {year}
+        </h2>
+        <ul style="list-style:none;padding:0;margin:0;">
+          {byYear.get(year)!.map(post => (
+            <li style="display:flex;gap:1rem;align-items:baseline;padding:0.25rem 0;flex-wrap:wrap;">
+              <time
+                datetime={post.data.date.toISOString()}
+                style="font-family:var(--font-sans);font-size:0.85rem;color:var(--text-muted);white-space:nowrap;min-width:6rem;"
+              >
+                {post.data.date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+              </time>
+              <a href={postUrl(post.id)} style="font-size:1rem;">
+                {post.data.title}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </section>
+
+  {posts.length === 0 && (
+    <p style="font-family:var(--font-sans);color:var(--text-muted);">No posts yet.</p>
+  )}
+</Base>

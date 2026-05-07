@@ -1,0 +1,25 @@
+{
+  "hooks": [
+    {
+      "name": "Block force push",
+      "event": "BeforeShellExecution",
+      "match": "git push.*--force",
+      "action": "block",
+      "message": "Force pushing is not allowed on this repo. Use a new commit instead."
+    },
+    {
+      "name": "Block dangerous rm",
+      "event": "BeforeShellExecution",
+      "match": "rm -rf (?!dist|.astro|node_modules)",
+      "action": "warn",
+      "message": "Removing files outside dist/.astro/node_modules. Make sure this is intentional."
+    },
+    {
+      "name": "Validate content after edit",
+      "event": "AfterFileEdit",
+      "match": "src/content/**/*.{md,mdx}",
+      "action": "run",
+      "command": "npm run check:content"
+    }
+  ]
+}

@@ -1,7 +1,10 @@
-_drafts/
-_site/
+dist/
+.astro/
+node_modules/
 .DS_Store
+.env
+.env.*
+!.env.example
 *.swp
-node_modules
-.wrangler
-dist
+.wrangler/
+.backup/

@@ -1,0 +1,86 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+  canonicalUrl?: string;
+  ogImage?: string;
+  type?: "website" | "article";
+  publishedTime?: Date;
+  updatedTime?: Date;
+  tags?: string[];
+}
+
+const {
+  title,
+  description = "Chao Tan's personal blog — engineering, performance, career, and life.",
+  canonicalUrl,
+  ogImage = "/og-default.png",
+  type = "website",
+  publishedTime,
+  updatedTime,
+  tags = [],
+} = Astro.props;
+
+const siteUrl = "https://tanchao.xyz";
+const resolvedCanonical = canonicalUrl ?? new URL(Astro.url.pathname, siteUrl).href;
+const resolvedOg = ogImage.startsWith("http") ? ogImage : new URL(ogImage, siteUrl).href;
+const fullTitle = title === "tanchao's blog" ? title : `${title} — tanchao's blog`;
+---
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>{fullTitle}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={resolvedCanonical} />
+
+<!-- Open Graph -->
+<meta property="og:title" content={fullTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={resolvedCanonical} />
+<meta property="og:image" content={resolvedOg} />
+<meta property="og:type" content={type} />
+<meta property="og:site_name" content="tanchao's blog" />
+<meta property="og:locale" content="en_US" />
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={fullTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={resolvedOg} />
+<meta name="twitter:site" content="@chaostan" />
+
+<!-- Article-specific -->
+{type === "article" && publishedTime && (
+  <meta property="article:published_time" content={publishedTime.toISOString()} />
+)}
+{type === "article" && updatedTime && (
+  <meta property="article:modified_time" content={updatedTime.toISOString()} />
+)}
+{type === "article" && tags.map(tag => (
+  <meta property="article:tag" content={tag} />
+))}
+{type === "article" && (
+  <meta property="article:author" content="Chao Tan" />
+)}
+
+<!-- Feeds -->
+<link
+  rel="alternate"
+  type="application/rss+xml"
+  href={`${siteUrl}/rss.xml`}
+  title="tanchao's blog RSS Feed"
+/>
+
+<!-- Favicon -->
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+<!-- Dark mode script (runs before paint to avoid flash) -->
+<script is:inline>
+  (function () {
+    const stored = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    if (stored === "dark" || (!stored && prefersDark)) {
+      document.documentElement.classList.add("dark");
+    }
+  })();
+</script>

@@ -1,0 +1,65 @@
+---
+import "../styles/global.css";
+import Head from "../components/Head.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import JsonLd from "../components/JsonLd.astro";
+
+interface Props {
+  title: string;
+  description?: string;
+  canonicalUrl?: string;
+  ogImage?: string;
+  type?: "website" | "article";
+  publishedTime?: Date;
+  updatedTime?: Date;
+  tags?: string[];
+  jsonLd?: Record<string, unknown> | Record<string, unknown>[];
+}
+
+const { jsonLd, ...headProps } = Astro.props;
+
+const personSchema = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "@id": "https://tanchao.xyz/#person",
+  name: "Chao Tan",
+  alternateName: ["tc", "tanchao"],
+  url: "https://tanchao.xyz",
+  email: "chaos.tc@gmail.com",
+  sameAs: [
+    "https://github.com/tanchao",
+    "https://twitter.com/chaostan",
+  ],
+  jobTitle: "Senior Software Engineer",
+  knowsAbout: [
+    "API design",
+    "distributed systems",
+    "performance tuning",
+    "data privacy",
+    "data governance",
+    "microservices",
+    "software engineering",
+    "Java",
+    "Python",
+  ],
+  description:
+    "Senior software engineer at Snowflake, working on data privacy and governance. Former Amazon Alexa. Expert in API design, performance tuning, and distributed systems.",
+};
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <Head {...headProps} />
+    <JsonLd schema={personSchema} />
+    {jsonLd && <JsonLd schema={jsonLd} />}
+  </head>
+  <body>
+    <Header />
+    <main style="max-width:48rem;margin:0 auto;padding:0 1.5rem;flex:1;">
+      <slot />
+    </main>
+    <Footer />
+  </body>
+</html>

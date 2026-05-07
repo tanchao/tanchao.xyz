@@ -1,0 +1,41 @@
+---
+import { getCollection, render } from "astro:content";
+import Post from "../../layouts/Post.astro";
+import { postSlug, postUrl, readingTime, sortedPosts } from "../../lib/posts";
+
+export async function getStaticPaths() {
+  const posts = sortedPosts(await getCollection("posts"), true);
+  return posts.map((post, i) => {
+    const slug = postSlug(post.id);
+    const prevPost = posts[i + 1]
+      ? { title: posts[i + 1].data.title, url: postUrl(posts[i + 1].id) }
+      : null;
+    const nextPost = posts[i - 1]
+      ? { title: posts[i - 1].data.title, url: postUrl(posts[i - 1].id) }
+      : null;
+    return {
+      params: { slug },
+      props: { post, prevPost, nextPost },
+    };
+  });
+}
+
+const { post, prevPost, nextPost } = Astro.props;
+const { Content, remarkPluginFrontmatter, headings } = await render(post);
+const rt = readingTime(post.body ?? "");
+---
+
+<Post
+  title={post.data.title}
+  description={post.data.description}
+  date={post.data.date}
+  updated={post.data.updated}
+  tags={post.data.tags}
+  canonicalUrl={post.data.canonical}
+  originalUrl={post.data.originalUrl}
+  readingTime={rt}
+  prevPost={prevPost}
+  nextPost={nextPost}
+>
+  <Content />
+</Post>

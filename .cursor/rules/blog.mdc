@@ -1,0 +1,41 @@
+---
+description: Always-applied rules for tanchao.xyz engineering blog
+globs: ["**/*.astro", "**/*.ts", "**/*.md", "**/*.mdx"]
+alwaysApply: true
+---
+
+# tanchao.xyz — Cursor Rules
+
+This is a static Astro 6 blog. See AGENTS.md for the full project guide.
+
+## Key conventions
+
+- **Framework**: Astro 6, Tailwind CSS v4, TypeScript strict mode
+- **Content**: Posts in `src/content/posts/YYYY-MM-DD-slug.md`, Notes in `src/content/notes/slug.md`
+- **URLs**: Posts resolve to `/posts/YYYY/MM/DD/slug/` via the `postSlug()` helper in `src/lib/posts.ts`
+- **Styling**: Use CSS variables (`var(--text)`, `var(--link)`, etc.) defined in `src/styles/global.css` — do NOT hardcode colors
+- **Dark mode**: Controlled by `.dark` class on `<html>` — use CSS variables, not Tailwind `dark:` prefix
+- **No Decap CMS**: Content is authored in the editor and pushed via git
+
+## When editing content files
+
+- Validate frontmatter against the schema in `src/content.config.ts`
+- Never invent or hallucinate dates
+- `title` max 80 characters
+- Slugs must be kebab-case
+- Run `npm run check:content` after editing frontmatter
+
+## When editing Astro components
+
+- Keep styles inline using `style=""` with CSS variables, or use Tailwind utility classes
+- Components receive typed Props interfaces — always define them
+- Use `font-family:var(--font-sans)` for UI text, `font-family:var(--font-serif)` for body
+
+## Commands
+
+```
+npm run dev
+npm run build
+npm run check
+npm run new:post -- "Title"
+```

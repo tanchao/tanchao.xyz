@@ -1,0 +1,51 @@
+---
+description: Rules for editing blog content files
+globs: ["src/content/**/*.md", "src/content/**/*.mdx"]
+alwaysApply: false
+---
+
+# Content File Rules
+
+When editing files in `src/content/`:
+
+## Frontmatter rules
+
+### Posts (`src/content/posts/`)
+
+Required fields:
+- `title`: string, max 80 chars, human-readable
+- `date`: YYYY-MM-DD format (today's date for new posts)
+
+Optional but recommended:
+- `description`: 1-2 sentences, max 160 chars, for SEO meta and feed excerpts
+- `tags`: array of lowercase kebab-case strings
+- `draft: true` for unpublished posts
+
+Never invent or guess:
+- Do NOT make up dates
+- Do NOT add `originalUrl` unless you know the actual old URL
+- Do NOT add `canonical` unless the content genuinely lives elsewhere first
+
+### Notes (`src/content/notes/`)
+
+Required: `title`, `date`
+
+## Writing style
+
+- Chao's voice: direct, technical, reflective, honest about uncertainty
+- Code blocks should use fenced backticks with language identifier
+- Prefer shorter paragraphs for readability
+- Chinese phrases are fine if they add context
+
+## File naming
+
+Files MUST be named: `YYYY-MM-DD-kebab-case-slug.md`
+- Example: `2026-05-06-my-post-title.md`
+- NO spaces, NO uppercase, NO special characters except hyphens
+
+## Validation
+
+After editing, run:
+```
+npm run check:content
+```

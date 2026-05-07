@@ -1,0 +1,37 @@
+{
+  "name": "tanchao-xyz",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && npx pagefind --site dist",
+    "preview": "astro preview",
+    "astro": "astro",
+    "check": "astro check",
+    "check:content": "npx tsx scripts/check-content.ts",
+    "lint": "biome lint ./src ./scripts",
+    "format": "biome format --write ./src ./scripts",
+    "new:post": "npx tsx scripts/new-post.ts"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^5.0.4",
+    "@astrojs/sitemap": "^3.7.2",
+    "@tailwindcss/vite": "^4.2.4",
+    "astro": "^6.2.2",
+    "astro-expressive-code": "^0.42.0",
+    "tailwindcss": "^4.2.4"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@astrojs/rss": "^4.0.18",
+    "@biomejs/biome": "^2.4.14",
+    "expressive-code": "^0.42.0",
+    "pagefind": "^1.5.2",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3",
+    "zod": "^4.4.3"
+  }
+}

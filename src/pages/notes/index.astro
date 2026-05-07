@@ -1,0 +1,36 @@
+---
+import Base from "../../layouts/Base.astro";
+import { getCollection } from "astro:content";
+import { noteUrl } from "../../lib/posts";
+
+const notes = (await getCollection("notes"))
+  .filter(n => !n.data.draft)
+  .sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+---
+
+<Base title="Notes" description="Short notes and quick thoughts by Chao Tan.">
+  <h1>Notes</h1>
+  <p style="font-family:var(--font-sans);font-size:0.95rem;color:var(--text-muted);margin-bottom:2rem;">
+    Short-form thoughts, links, and learnings.
+  </p>
+
+  {notes.length === 0 && (
+    <p style="font-family:var(--font-sans);color:var(--text-muted);">No notes yet.</p>
+  )}
+
+  <ul style="list-style:none;padding:0;margin:0;">
+    {notes.map(note => (
+      <li style="padding:0.75rem 0;border-bottom:1px solid var(--border);">
+        <div style="display:flex;gap:1rem;align-items:baseline;flex-wrap:wrap;">
+          <time
+            datetime={note.data.date.toISOString()}
+            style="font-family:var(--font-sans);font-size:0.85rem;color:var(--text-muted);white-space:nowrap;"
+          >
+            {note.data.date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+          </time>
+          <a href={noteUrl(note.id)}>{note.data.title}</a>
+        </div>
+      </li>
+    ))}
+  </ul>
+</Base>

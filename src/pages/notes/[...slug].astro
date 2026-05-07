@@ -1,0 +1,42 @@
+---
+import { getCollection, render } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import { noteSlug, noteUrl } from "../../lib/posts";
+
+export async function getStaticPaths() {
+  const notes = await getCollection("notes");
+  return notes.map(note => ({
+    params: { slug: noteSlug(note.id) },
+    props: { note },
+  }));
+}
+
+const { note } = Astro.props;
+const { Content } = await render(note);
+
+const dateStr = note.data.date.toLocaleDateString("en-US", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
+---
+
+<Base title={note.data.title} type="article" publishedTime={note.data.date}>
+  <article>
+    <header style="margin-bottom:2rem;">
+      <h1>{note.data.title}</h1>
+      <time
+        datetime={note.data.date.toISOString()}
+        style="font-family:var(--font-sans);font-size:0.875rem;color:var(--text-muted);"
+      >
+        {dateStr}
+      </time>
+    </header>
+    <div class="prose">
+      <Content />
+    </div>
+  </article>
+  <p style="margin-top:2rem;font-family:var(--font-sans);font-size:0.875rem;">
+    <a href="/notes/">← All notes</a>
+  </p>
+</Base>

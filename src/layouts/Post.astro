@@ -1,0 +1,121 @@
+---
+import Base from "./Base.astro";
+
+interface Props {
+  title: string;
+  description?: string;
+  date: Date;
+  updated?: Date;
+  tags?: string[];
+  canonicalUrl?: string;
+  originalUrl?: string;
+  readingTime?: number;
+  prevPost?: { title: string; url: string } | null;
+  nextPost?: { title: string; url: string } | null;
+}
+
+const {
+  title,
+  description,
+  date,
+  updated,
+  tags = [],
+  canonicalUrl,
+  originalUrl,
+  readingTime,
+  prevPost,
+  nextPost,
+} = Astro.props;
+
+const dateStr = date.toLocaleDateString("en-US", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
+const updatedStr = updated
+  ? updated.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
+  : null;
+
+const blogPostingSchema = {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  headline: title,
+  description: description,
+  datePublished: date.toISOString(),
+  dateModified: (updated ?? date).toISOString(),
+  author: {
+    "@type": "Person",
+    "@id": "https://tanchao.xyz/#person",
+    name: "Chao Tan",
+  },
+  url: canonicalUrl ?? new URL(Astro.url.pathname, "https://tanchao.xyz").href,
+  keywords: tags.join(", "),
+  inLanguage: "en-US",
+};
+---
+
+<Base
+  title={title}
+  description={description}
+  canonicalUrl={canonicalUrl}
+  type="article"
+  publishedTime={date}
+  updatedTime={updated}
+  tags={tags}
+  jsonLd={blogPostingSchema}
+>
+  <article>
+    <header style="margin-bottom:2rem;">
+      <h1 style="margin-bottom:0.5rem;">{title}</h1>
+      <div style="font-family:var(--font-sans);font-size:0.875rem;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;">
+        <time datetime={date.toISOString()}>{dateStr}</time>
+        {updatedStr && <span>· updated {updatedStr}</span>}
+        {readingTime && <span>· {readingTime} min read</span>}
+      </div>
+      {tags.length > 0 && (
+        <div style="margin-top:0.75rem;display:flex;flex-wrap:wrap;gap:0.375rem;">
+          {tags.map(tag => (
+            <a href={`/tags/${tag}/`} class="tag-pill">{tag}</a>
+          ))}
+        </div>
+      )}
+      {originalUrl && (
+        <p style="margin-top:0.75rem;font-family:var(--font-sans);font-size:0.8rem;color:var(--text-muted);">
+          Originally at <a href={originalUrl} rel="noopener">{originalUrl}</a>
+        </p>
+      )}
+    </header>
+
+    <div class="prose">
+      <slot />
+    </div>
+  </article>
+
+  {(prevPost || nextPost) && (
+    <nav
+      aria-label="Post navigation"
+      style="margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);display:grid;grid-template-columns:1fr 1fr;gap:1rem;font-family:var(--font-sans);font-size:0.875rem;"
+    >
+      <div>
+        {prevPost && (
+          <>
+            <p style="color:var(--text-muted);margin-bottom:0.25rem;">← Older</p>
+            <a href={prevPost.url}>{prevPost.title}</a>
+          </>
+        )}
+      </div>
+      <div style="text-align:right;">
+        {nextPost && (
+          <>
+            <p style="color:var(--text-muted);margin-bottom:0.25rem;">Newer →</p>
+            <a href={nextPost.url}>{nextPost.title}</a>
+          </>
+        )}
+      </div>
+    </nav>
+  )}
+</Base>

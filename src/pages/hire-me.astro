@@ -1,0 +1,113 @@
+---
+import Base from "../layouts/Base.astro";
+
+const workSchema = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "@id": "https://tanchao.xyz/#person",
+  name: "Chao Tan",
+  jobTitle: "Senior Software Engineer",
+  url: "https://tanchao.xyz",
+  email: "chaos.tc@gmail.com",
+  description:
+    "Senior software engineer with 15+ years experience. Expert in distributed systems, API design, and performance engineering. Currently at Snowflake.",
+  hasOccupation: {
+    "@type": "Occupation",
+    name: "Senior Software Engineer",
+    occupationLocation: {
+      "@type": "City",
+      name: "Bellevue, Washington, USA",
+    },
+    skills: [
+      "API Design",
+      "Distributed Systems",
+      "Performance Tuning",
+      "Data Privacy",
+      "Data Governance",
+      "Microservices Architecture",
+      "Java",
+      "Python",
+      "Snowflake",
+      "AWS",
+      "System Design",
+      "Technical Leadership",
+    ].join(", "),
+  },
+  workExperience: [
+    {
+      "@type": "OrganizationRole",
+      roleName: "Senior Software Engineer",
+      memberOf: { "@type": "Organization", name: "Snowflake" },
+      startDate: "2022-09",
+    },
+    {
+      "@type": "OrganizationRole",
+      roleName: "Senior SDE / Tech Lead",
+      memberOf: { "@type": "Organization", name: "Amazon" },
+      startDate: "2016",
+      endDate: "2022",
+    },
+  ],
+};
+---
+
+<Base
+  title="Work"
+  description="Chao Tan's professional background and what he's looking for. 15+ years in distributed systems, API design, and performance engineering."
+  jsonLd={workSchema}
+>
+  <h1>Work</h1>
+
+  <div class="prose">
+    <p>
+      I'm a senior software engineer with 15+ years of experience, currently at Snowflake. I'm selectively open to conversations about roles that align with what I care about.
+    </p>
+
+    <h2>Experience</h2>
+
+    <h3>Snowflake <span style="font-weight:400;color:var(--text-muted);font-size:0.9em;">Sep 2022 – present</span></h3>
+    <p>Senior Software Engineer — Data Privacy &amp; Governance</p>
+    <ul>
+      <li>Built the data classification platform that auto-tags sensitive data at scale</li>
+      <li>10x performance improvement on core classification function, reduced p90 latency from 80s → 10s, compressed p50/p90 ratio from 1x to 0.4x</li>
+      <li>Innovated on Snowflake UDTF parallel scan to eliminate per-column linear growth</li>
+    </ul>
+
+    <h3>Amazon <span style="font-weight:400;color:var(--text-muted);font-size:0.9em;">2016 – 2022</span></h3>
+    <p>Senior SDE / Tech Lead — Alexa Cloud Platform Services</p>
+    <ul>
+      <li>Led 14-person engineering team decoupling THE Alexa cloud service into three fundamental platform services, impacting 10,000+ internal developers</li>
+      <li>Built A2GS (backend for Amazon Astro robot) from scratch; operated Tier-1 service at 100k+ TPS with millisecond latency</li>
+      <li>Led universal application contract design reviewed and signed off by L10 Principal</li>
+      <li>Contributed to amazon.com/bbp (Amazon Bargain Finds), a billion-GMV subsite</li>
+    </ul>
+
+    <h3>HSBC <span style="font-weight:400;color:var(--text-muted);font-size:0.9em;">2012 – 2016</span></h3>
+    <p>Senior Software Engineer</p>
+    <ul>
+      <li>Founded MESA environment management platform; reduced env initialization from 2 days → 2 hours</li>
+      <li>Automated full regression testing from 2-week human task to daily automated job</li>
+    </ul>
+
+    <h2>Education</h2>
+    <p>
+      <strong>B.S. Computer Science</strong>, East China University of Science and Technology, 2008. Diploma in Finance.
+    </p>
+
+    <h2>What I'm looking for</h2>
+    <ul>
+      <li>Technical depth: complex systems, real performance and reliability challenges</li>
+      <li>Strong engineering culture with ownership and mechanisms, not just meetings</li>
+      <li>AI-native companies that take the craft of software seriously</li>
+      <li>Staff / Principal / Architect-level roles</li>
+    </ul>
+
+    <h2>Contact</h2>
+    <p>
+      <a href="mailto:chaos.tc@gmail.com">chaos.tc@gmail.com</a>
+    </p>
+    <p style="color:var(--text-muted);font-size:0.875rem;">
+      All opinions here are my own and do not represent my employer.
+    </p>
+  </div>
+</Base>

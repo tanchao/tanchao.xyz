@@ -1,0 +1,103 @@
+---
+import Base from "../layouts/Base.astro";
+import JsonLd from "../components/JsonLd.astro";
+
+const personSchema = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "@id": "https://tanchao.xyz/#person",
+  name: "Chao Tan",
+  alternateName: ["tc", "tanchao"],
+  givenName: "Chao",
+  familyName: "Tan",
+  url: "https://tanchao.xyz",
+  email: "chaos.tc@gmail.com",
+  sameAs: [
+    "https://github.com/tanchao",
+    "https://twitter.com/chaostan",
+  ],
+  jobTitle: "Senior Software Engineer",
+  worksFor: {
+    "@type": "Organization",
+    name: "Snowflake",
+    url: "https://snowflake.com",
+  },
+  knowsAbout: [
+    "API design",
+    "distributed systems",
+    "performance tuning",
+    "data privacy",
+    "data governance",
+    "microservices",
+    "software engineering",
+    "Java",
+    "Python",
+    "Snowflake",
+    "data classification",
+  ],
+  alumniOf: [
+    {
+      "@type": "Organization",
+      name: "Amazon",
+    },
+  ],
+  description:
+    "Senior software engineer at Snowflake, working on data privacy and governance. Former Amazon Alexa tech lead. Expert in API design, performance tuning, and distributed systems.",
+};
+---
+
+<Base
+  title="About"
+  description="About Chao Tan — senior software engineer at Snowflake, former Amazon Alexa tech lead."
+  jsonLd={personSchema}
+>
+  <h1>About Me</h1>
+
+  <div class="prose">
+    <p>
+      My name is <strong>Chao Tan</strong> (谭超). Call me <code>Chao</code> or <code>tc</code>.
+    </p>
+
+    <p>
+      I'm a senior software engineer at <strong>Snowflake</strong> in Bellevue, Washington, working on data privacy and governance — specifically the classification and tagging systems that help organizations understand and protect their data.
+    </p>
+
+    <p>
+      Before Snowflake, I spent six years at <strong>Amazon</strong> as a tech lead on Alexa's cloud platform services. I owned APIs serving hundreds of millions of requests, led a 14-person engineering team through major infrastructure decoupling, and built Amazon's robot (Astro) backend from scratch.
+    </p>
+
+    <p>
+      I've been coding since 2004. I grew up in software through eBay, HSBC, and eventually Amazon, each teaching me something different: automation methodology at eBay, global distributed systems at HSBC, and ownership culture at Amazon.
+    </p>
+
+    <h2>What I care about</h2>
+    <ul>
+      <li>Long-term engineering value over short-term velocity</li>
+      <li>Automation over process (if it can be automated, it should be)</li>
+      <li><code>SDE = Somebody Do Everything</code> — not just code, but the full outcome</li>
+      <li>Dynamic system performance tuning, end-to-end</li>
+      <li>First principles thinking before reaching for tools</li>
+    </ul>
+
+    <h2>What I'm good at</h2>
+    <ul>
+      <li>API design and distributed microservices</li>
+      <li>Production performance tuning (10x improvements without luck)</li>
+      <li>Watching over complex systems end-to-end, including operational excellence</li>
+      <li>Managing long-running and high-stakes projects</li>
+      <li>Leading engineers through mechanism and documentation, not just meetings</li>
+    </ul>
+
+    <h2>Outside work</h2>
+    <p>
+      Art, food, basketball, swimming, and skiing. Father. I believe in staying foolish and hungry.
+    </p>
+
+    <h2>Contact</h2>
+    <p>
+      <a href="mailto:chaos.tc@gmail.com">chaos.tc@gmail.com</a> ·
+      <a href="https://github.com/tanchao" rel="noopener">GitHub</a> ·
+      <a href="https://twitter.com/chaostan" rel="noopener">Twitter @chaostan</a>
+    </p>
+  </div>
+</Base>

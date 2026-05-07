@@ -1,0 +1,37 @@
+---
+import ThemeToggle from "./ThemeToggle.astro";
+
+const navLinks = [
+  { href: "/posts/", label: "Posts" },
+  { href: "/notes/", label: "Notes" },
+  { href: "/about/", label: "About" },
+  { href: "/hire-me/", label: "Work" },
+];
+
+const current = Astro.url.pathname;
+---
+
+<header style="border-bottom:1px solid var(--border);padding:0.75rem 0;margin-bottom:2.5rem;">
+  <div style="max-width:48rem;margin:0 auto;padding:0 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;">
+    <a
+      href="/"
+      style="font-family:var(--font-sans);font-weight:700;font-size:1.1rem;color:var(--link);text-decoration:none;white-space:nowrap;"
+    >
+      tanchao.xyz
+    </a>
+    <nav aria-label="Main navigation" style="display:flex;align-items:center;gap:0.25rem;flex-wrap:wrap;">
+      {navLinks.map(({ href, label }) => {
+        const isActive = current === href || current.startsWith(href) && href !== "/";
+        return (
+          <a
+            href={href}
+            style={`font-family:var(--font-sans);font-size:0.9rem;padding:0.25rem 0.5rem;border-radius:4px;text-decoration:none;transition:background-color 0.15s ease;color:${isActive ? "var(--link)" : "var(--text-muted)"};font-weight:${isActive ? "600" : "400"};`}
+          >
+            {label}
+          </a>
+        );
+      })}
+      <ThemeToggle />
+    </nav>
+  </div>
+</header>

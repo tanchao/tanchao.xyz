@@ -1,0 +1,29 @@
+---
+import Base from "../../layouts/Base.astro";
+import { getCollection } from "astro:content";
+import { sortedPosts, allTags, postUrl } from "../../lib/posts";
+
+const posts = sortedPosts(await getCollection("posts"));
+const tags = allTags(posts);
+
+// Count posts per tag
+const tagCount = new Map<string, number>();
+for (const post of posts) {
+  for (const tag of post.data.tags) {
+    tagCount.set(tag, (tagCount.get(tag) ?? 0) + 1);
+  }
+}
+---
+
+<Base title="Tags" description="All tags on tanchao's blog.">
+  <h1>Tags</h1>
+  <ul style="list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:0.5rem;">
+    {tags.map(tag => (
+      <li>
+        <a href={`/tags/${tag}/`} class="tag-pill">
+          {tag} <span style="color:var(--text-muted);font-size:0.75rem;">({tagCount.get(tag)})</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</Base>

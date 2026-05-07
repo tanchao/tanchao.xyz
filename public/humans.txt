@@ -1,0 +1,12 @@
+/* TEAM */
+Author: Chao Tan
+Contact: chaos.tc@gmail.com
+From: Bellevue, Washington, USA
+GitHub: https://github.com/tanchao
+Twitter: @chaostan
+
+/* SITE */
+Language: English
+Standards: HTML5, CSS3
+Components: Astro, Tailwind CSS v4
+Hosting: Cloudflare Pages

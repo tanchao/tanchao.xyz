@@ -1,0 +1,8 @@
+# tanchao.xyz — Cloudflare Pages redirects
+# Preserve old Jekyll URLs from tanchao.github.io
+
+# Old Jekyll permalink format: /:year/:month/:day/:slug.html
+/:year/:month/:day/:slug.html /posts/:year/:month/:day/:slug/ 301
+
+# Old tanchao.github.io domain paths (if any were linked)
+/blog/* /posts/ 301

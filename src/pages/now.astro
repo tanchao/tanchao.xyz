@@ -1,0 +1,33 @@
+---
+import Base from "../layouts/Base.astro";
+
+const lastUpdated = "May 2026";
+---
+
+<Base
+  title="Now"
+  description="What Chao Tan is focused on right now."
+>
+  <h1>Now</h1>
+  <p style="font-family:var(--font-sans);font-size:0.875rem;color:var(--text-muted);margin-bottom:2rem;">
+    Last updated: {lastUpdated} · From Bellevue, WA ·
+    <a href="https://nownownow.com/about" rel="noopener">What is this?</a>
+  </p>
+
+  <div class="prose">
+    <h2>Work</h2>
+    <p>
+      Engineering at Snowflake on data privacy and governance. Working on the classification platform that helps customers understand what data they have.
+    </p>
+
+    <h2>Learning</h2>
+    <p>
+      Exploring the AI-native engineering workflow — Cursor, Claude Code, and how to build systems that are intelligently maintainable by AI agents. This blog is my first experiment.
+    </p>
+
+    <h2>Life</h2>
+    <p>
+      Spending time with family in the Pacific Northwest. Basketball. Trying to ski more.
+    </p>
+  </div>
+</Base>
