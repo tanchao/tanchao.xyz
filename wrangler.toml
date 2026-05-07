@@ -5,5 +5,11 @@ name = "tanchao-xyz"
 compatibility_date = "2024-09-23"
 pages_build_output_dir = "dist"
 
+[vars]
+NODE_VERSION = "22"
+
 [env.production]
 name = "tanchao-xyz"
+
+[env.production.vars]
+NODE_VERSION = "22"
