@@ -69,7 +69,7 @@ const projects = defineCollection({
 ---
 title: "Privacy Filter Model"
 status: active
-startDate: 2026-05-01
+started: 2026-05-01
 tags: ["ml", "snowflake"]
 ---
 
@@ -118,7 +118,7 @@ Add `npm run new:project -- "Project Title"` that creates:
 src/content/projects/project-title.md
 ```
 
-With frontmatter pre-filled (status: active, startDate: today, draft: true).
+With frontmatter pre-filled (status: active, started: today, draft: true).
 
 Update `scripts/new-post.ts` or create `scripts/new-project.ts`.
 

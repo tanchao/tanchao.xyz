@@ -41,4 +41,5 @@ npm run check
 npm run check:content
 npm run new:post -- "Title"
 npm run new:project -- "Title"
+npm run sync:substack
 ```

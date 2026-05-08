@@ -1,7 +1,22 @@
 # Agent Feedback Loop
 
-Status: **planned**
+Status: **done**
 Created: 2026-05-06
+Shipped: 2026-05-07
+
+## Shipped — divergences from plan
+
+This feature is fully implemented. The shipped version differs from the plan in the following ways:
+
+| Plan | Shipped |
+|------|---------|
+| Form on `/about/` | Dedicated page at `/feedback/` (`src/pages/feedback.astro`) |
+| Workflow file `claude-code.yml` | `claude-agent.yml` (`.github/workflows/claude-agent.yml`) |
+| Trigger: `issues: [labeled]` only | Trigger: `issues: [opened, labeled]` + `issue_comment: [created]` |
+| `model`, `timeout_minutes` action inputs | `claude_args: "--allowed-tools bash edit read write --system-prompt-file AGENTS.md --max-turns 20"` |
+| Redirect to `/about/?thanks=1` on submit | Handled in `feedback.astro` client-side |
+
+Do not re-implement any part of this. To modify the workflow or Pages Function, edit the actual files — but note that `claude-agent.yml` and `functions/api/feedback.ts` are **off-limits for agents** (see AGENTS.md constraints).
 
 ## Goal
 
