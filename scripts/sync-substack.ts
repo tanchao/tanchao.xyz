@@ -170,6 +170,50 @@ type FeedPage = {
 };
 
 // ---------------------------------------------------------------------------
+// Fetch helpers
+// ---------------------------------------------------------------------------
+const MAX_RETRIES = 3;
+const INITIAL_BACKOFF_MS = 2_000;
+
+async function fetchWithRetry(url: string): Promise<Response | null> {
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const res = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        "User-Agent":
+          "Mozilla/5.0 (compatible; tanchao.xyz/1.0; +https://tanchao.xyz)",
+      },
+    });
+
+    if (res.ok) return res;
+
+    if (res.status === 403 || res.status === 401) {
+      console.warn(
+        `⚠ Substack API returned ${res.status} — access may be blocked. Skipping sync.`,
+      );
+      return null;
+    }
+
+    const retryable = res.status === 429 || res.status >= 500;
+    if (retryable && attempt < MAX_RETRIES) {
+      const delay = INITIAL_BACKOFF_MS * 2 ** attempt;
+      console.warn(
+        `⚠ ${res.status} ${res.statusText} — retrying in ${delay}ms (attempt ${attempt + 1}/${MAX_RETRIES})`,
+      );
+      await new Promise(r => setTimeout(r, delay));
+      continue;
+    }
+
+    console.error(
+      `API error: ${res.status} ${res.statusText} (after ${attempt + 1} attempt(s))`,
+    );
+    process.exit(1);
+  }
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // Fetch all notes (paginated)
 // ---------------------------------------------------------------------------
 async function fetchAllNotes(): Promise<SubstackItem[]> {
@@ -181,14 +225,8 @@ async function fetchAllNotes(): Promise<SubstackItem[]> {
       ? `${API_BASE}?limit=${PAGE_SIZE}&cursor=${encodeURIComponent(cursor)}`
       : `${API_BASE}?limit=${PAGE_SIZE}`;
 
-    const res = await fetch(url, {
-      headers: { "User-Agent": "tanchao.xyz-sync/1.0" },
-    });
-
-    if (!res.ok) {
-      console.error(`API error: ${res.status} ${res.statusText}`);
-      process.exit(1);
-    }
+    const res = await fetchWithRetry(url);
+    if (!res) return all;
 
     const page: FeedPage = await res.json();
     const notes = (page.items ?? []).filter(
