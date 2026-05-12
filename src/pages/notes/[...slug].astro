@@ -20,7 +20,12 @@ const dateStr = note.data.date.toLocaleDateString("en-US", {
   day: "numeric",
 });
 
-const noteCanonical = note.data.sourceUrl ?? new URL(`/notes/${noteSlug(note.id)}/`, "https://tanchao.xyz").href;
+// Self-canonical: this is the indexable copy on tanchao.xyz.
+// Syndicated notes link to the original source (e.g. Substack) in the body
+// for attribution, but the canonical URL must be the local one — otherwise
+// Google treats the page as a duplicate of a URL that itself redirects, and
+// neither the local nor the source copy ends up in our index.
+const noteCanonical = new URL(`/notes/${noteSlug(note.id)}/`, "https://tanchao.xyz").href;
 const blogPostingSchema = {
   "@context": "https://schema.org",
   "@type": "BlogPosting",
@@ -29,6 +34,7 @@ const blogPostingSchema = {
   dateModified: note.data.date.toISOString(),
   author: { "@type": "Person", "@id": "https://tanchao.xyz/#person", name: "Chao Tan" },
   url: noteCanonical,
+  ...(note.data.sourceUrl ? { sameAs: note.data.sourceUrl } : {}),
   isPartOf: { "@type": "Blog", "@id": "https://tanchao.xyz/#website" },
   inLanguage: "en-US",
 };
