@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import sitemap from "@astrojs/sitemap";
 import mdx from "@astrojs/mdx";
 import expressiveCode from "astro-expressive-code";
+import remarkMermaid from "./src/lib/remark-mermaid.ts";
 
 export default defineConfig({
   site: "https://tanchao.xyz",
@@ -25,6 +26,7 @@ export default defineConfig({
   ],
 
   markdown: {
+    remarkPlugins: [remarkMermaid],
     shikiConfig: {
       // Handled by expressive-code
     },

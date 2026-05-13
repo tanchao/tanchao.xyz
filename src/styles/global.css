@@ -226,6 +226,40 @@ a:hover {
   border-radius: 4px;
 }
 
+/* Mermaid diagrams: <pre class="mermaid"> is replaced with inline SVG
+   by the client-side renderer in Post.astro. Suppress the default <pre>
+   chrome so the diagram sits flush in the article flow. */
+.prose pre.mermaid {
+  background: transparent;
+  border: none;
+  padding: 1rem;
+  margin: 1.5rem 0;
+  overflow-x: auto;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  white-space: pre;
+}
+
+.prose pre.mermaid.mermaid-rendered {
+  background-color: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.25rem;
+  color: var(--text);
+}
+
+.prose pre.mermaid.mermaid-rendered svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.prose pre.mermaid.mermaid-error {
+  border: 1px solid #b91c1c;
+  color: #b91c1c;
+}
+
 /* Utilities */
 .text-muted {
   color: var(--text-muted);
