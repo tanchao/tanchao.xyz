@@ -113,6 +113,64 @@ const breadcrumbSchema = {
     </div>
   </article>
 
+  <script>
+    async function renderMermaid() {
+      const nodes = document.querySelectorAll<HTMLElement>(
+        "pre.mermaid[data-mermaid-source]"
+      );
+      if (nodes.length === 0) return;
+
+      const { default: mermaid } = await import("mermaid");
+      const theme =
+        document.documentElement.getAttribute("data-theme") ?? "light";
+      const isDark = theme === "dark" || theme === "solarized" || theme === "nord";
+
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "strict",
+        theme: isDark ? "dark" : "default",
+        fontFamily: "system-ui, -apple-system, sans-serif",
+      });
+
+      for (const node of nodes) {
+        const stored = node.dataset.mermaidSource;
+        const source = stored && stored.length > 0 ? stored : node.textContent ?? "";
+        if (!stored || stored.length === 0) {
+          node.dataset.mermaidSource = source;
+        }
+        const id = `mermaid-${Math.random().toString(36).slice(2, 10)}`;
+        try {
+          const { svg } = await mermaid.render(id, source);
+          node.innerHTML = svg;
+          node.classList.add("mermaid-rendered");
+        } catch (err) {
+          console.error("[mermaid] render failed", err);
+          node.classList.add("mermaid-error");
+        }
+      }
+    }
+
+    renderMermaid();
+
+    let rerenderTimer: number | undefined;
+    const observer = new MutationObserver(() => {
+      window.clearTimeout(rerenderTimer);
+      rerenderTimer = window.setTimeout(() => {
+        document
+          .querySelectorAll<HTMLElement>("pre.mermaid.mermaid-rendered")
+          .forEach((node) => {
+            node.innerHTML = "";
+            node.classList.remove("mermaid-rendered");
+          });
+        renderMermaid();
+      }, 50);
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+  </script>
+
   {relatedPosts.length > 0 && (
     <aside
       style="margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);font-family:var(--font-sans);"
