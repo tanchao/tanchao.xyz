@@ -6,7 +6,7 @@ tags: ["dbt", "terraform", "iac", "governance", "data"]
 draft: true
 ---
 
-> Part of the [Data Platform Protection survey](/posts/2026/05/13/data-platform-protection-survey/).
+> Part of the overview: [How Modern Data Platforms Protect Data](/posts/2026/05/13/how-modern-data-platforms-protect-data/).
 > Sibling deep-dives:
 > [BigQuery](/posts/2026/05/13/bigquery-data-protection/) ·
 > [Databricks Unity Catalog](/posts/2026/05/13/databricks-unity-catalog-data-protection/) ·
