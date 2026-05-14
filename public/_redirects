@@ -6,3 +6,6 @@
 
 # Old tanchao.github.io domain paths (if any were linked)
 /blog/* /posts/ 301
+
+# Renamed post slugs
+/posts/2026/05/13/data-platform-protection-survey/ /posts/2026/05/13/how-modern-data-platforms-protect-data/ 301
