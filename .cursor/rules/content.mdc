@@ -32,9 +32,15 @@ Required: `title`, `date`
 
 ## Writing style
 
-- Chao's voice: direct, technical, reflective, honest about uncertainty
+- Treat posts as professional notes from an experienced builder/operator, not academic writing or vendor marketing
+- Write from an engineer lens: systems, controls, evidence, failure modes, drift, trade-offs, and operating reality
+- Chao's voice: direct, technical, reflective, and honest about uncertainty
+- Prefer clean, simple language and short paragraphs
+- Use first person sparingly; the content should prove authority without self-justifying sections
+- Keep overview or pillar posts lighter and more scannable; push details into linked deep-dives
+- Prefer plain, direct titles; use the description for framing
+- Avoid labels like `survey`, `taxonomy`, `framework`, `comprehensive`, `definitive`, or "some thoughts on" unless they are clearly the best wording
 - Code blocks should use fenced backticks with language identifier
-- Prefer shorter paragraphs for readability
 - Chinese phrases are fine if they add context
 
 ## File naming
