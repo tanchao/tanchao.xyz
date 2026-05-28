@@ -16,6 +16,7 @@ interface Props {
   tags?: string[];
   jsonLd?: Record<string, unknown> | Record<string, unknown>[];
   suppressGlobalPerson?: boolean;
+  noindex?: boolean;
 }
 
 const { jsonLd, suppressGlobalPerson, ...headProps } = Astro.props;

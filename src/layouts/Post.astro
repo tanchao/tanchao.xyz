@@ -11,6 +11,8 @@ interface Props {
   ogImage?: string;
   originalUrl?: string;
   readingTime?: number;
+  wordCount?: number;
+  noindex?: boolean;
   prevPost?: { title: string; url: string } | null;
   nextPost?: { title: string; url: string } | null;
   relatedPosts?: { title: string; url: string }[];
@@ -26,6 +28,8 @@ const {
   ogImage,
   originalUrl,
   readingTime,
+  wordCount,
+  noindex = false,
   prevPost,
   nextPost,
   relatedPosts = [],
@@ -44,7 +48,13 @@ const updatedStr = updated
     })
   : null;
 
-const postUrl = canonicalUrl ?? new URL(Astro.url.pathname, "https://tanchao.xyz").href;
+const siteUrl = "https://tanchao.xyz";
+const postUrl = canonicalUrl ?? new URL(Astro.url.pathname, siteUrl).href;
+const resolvedOg = ogImage
+  ? ogImage.startsWith("http")
+    ? ogImage
+    : new URL(ogImage, siteUrl).href
+  : new URL("/og-default.png", siteUrl).href;
 
 const blogPostingSchema = {
   "@context": "https://schema.org",
@@ -55,21 +65,32 @@ const blogPostingSchema = {
   dateModified: (updated ?? date).toISOString(),
   author: {
     "@type": "Person",
-    "@id": "https://tanchao.xyz/#person",
+    "@id": `${siteUrl}/#person`,
+    name: "Chao Tan",
+  },
+  publisher: {
+    "@type": "Person",
+    "@id": `${siteUrl}/#person`,
     name: "Chao Tan",
   },
   url: postUrl,
+  mainEntityOfPage: {
+    "@type": "WebPage",
+    "@id": postUrl,
+  },
+  image: resolvedOg,
+  ...(wordCount ? { wordCount } : {}),
   keywords: tags.join(", "),
   inLanguage: "en-US",
-  isPartOf: { "@type": "Blog", "@id": "https://tanchao.xyz/#website" },
+  isPartOf: { "@type": "WebSite", "@id": `${siteUrl}/#website` },
 };
 
 const breadcrumbSchema = {
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
   itemListElement: [
-    { "@type": "ListItem", position: 1, name: "Home", item: "https://tanchao.xyz/" },
-    { "@type": "ListItem", position: 2, name: "Posts", item: "https://tanchao.xyz/posts/" },
+    { "@type": "ListItem", position: 1, name: "Home", item: `${siteUrl}/` },
+    { "@type": "ListItem", position: 2, name: "Posts", item: `${siteUrl}/posts/` },
     { "@type": "ListItem", position: 3, name: title, item: postUrl },
   ],
 };
@@ -84,6 +105,7 @@ const breadcrumbSchema = {
   publishedTime={date}
   updatedTime={updated}
   tags={tags}
+  noindex={noindex}
   jsonLd={[blogPostingSchema, breadcrumbSchema]}
 >
   <article>

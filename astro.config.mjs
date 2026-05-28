@@ -22,7 +22,9 @@ export default defineConfig({
         theme.name === "github-dark" ? ".dark" : ":root:not(.dark)",
     }),
     mdx(),
-    sitemap(),
+    sitemap({
+      filter: (page) => !page.includes("/feedback/"),
+    }),
   ],
 
   markdown: {

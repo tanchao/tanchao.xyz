@@ -8,6 +8,7 @@ interface Props {
   publishedTime?: Date;
   updatedTime?: Date;
   tags?: string[];
+  noindex?: boolean;
 }
 
 const {
@@ -19,6 +20,7 @@ const {
   publishedTime,
   updatedTime,
   tags = [],
+  noindex = false,
 } = Astro.props;
 
 const siteUrl = "https://tanchao.xyz";
@@ -31,6 +33,7 @@ const fullTitle = title === "tanchao's blog" ? title : `${title} — tanchao's b
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>{fullTitle}</title>
 <meta name="description" content={description} />
+{noindex && <meta name="robots" content="noindex, nofollow" />}
 <link rel="canonical" href={resolvedCanonical} />
 
 <!-- Open Graph -->

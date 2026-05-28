@@ -1,10 +1,11 @@
 ---
 import { getCollection, render } from "astro:content";
 import Post from "../../layouts/Post.astro";
-import { postSlug, postUrl, readingTime, sortedPosts } from "../../lib/posts";
+import { postSlug, postUrl, readingTime, sortedPosts, wordCount } from "../../lib/posts";
 
 export async function getStaticPaths() {
-  const posts = sortedPosts(await getCollection("posts"), true);
+  const includeDrafts = !import.meta.env.PROD;
+  const posts = sortedPosts(await getCollection("posts"), includeDrafts);
   return posts.map((post, i) => {
     const slug = postSlug(post.id);
     const prevPost = posts[i + 1]
@@ -21,8 +22,10 @@ export async function getStaticPaths() {
 }
 
 const { post, prevPost, nextPost } = Astro.props;
-const { Content, remarkPluginFrontmatter, headings } = await render(post);
-const rt = readingTime(post.body ?? "");
+const { Content } = await render(post);
+const body = post.body ?? "";
+const rt = readingTime(body);
+const wc = wordCount(body);
 
 const allPosts = sortedPosts(await getCollection("posts"));
 const currentTags = new Set(post.data.tags);
@@ -45,6 +48,8 @@ const relatedPosts = allPosts
   ogImage={post.data.image}
   originalUrl={post.data.originalUrl}
   readingTime={rt}
+  wordCount={wc}
+  noindex={post.data.draft}
   prevPost={prevPost}
   nextPost={nextPost}
   relatedPosts={relatedPosts}
