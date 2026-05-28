@@ -8,7 +8,7 @@ draft: true
 
 > Part of the overview: [How Modern Data Platforms Protect Data](/posts/2026/05/13/how-modern-data-platforms-protect-data/).
 > Sibling deep-dives:
-> [BigQuery](/posts/2026/05/13/bigquery-data-protection/) ·
+> [BigQuery](/posts/2026/05/17/bigquery-data-protection/) ·
 > [Databricks Unity Catalog](/posts/2026/05/13/databricks-unity-catalog-data-protection/) ·
 > [Policy overlay vendors](/posts/2026/05/13/data-policy-overlay-vendors/) ·
 > [The third-party auditor's gap list](/posts/2026/05/13/data-platform-auditor-gaps/)

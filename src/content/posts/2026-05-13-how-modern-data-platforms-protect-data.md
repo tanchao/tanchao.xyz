@@ -13,7 +13,7 @@ This post is a shared evaluation lens for data protection across BigQuery, Datab
 The audience is the engineer or architect who needs to explain their platform's protection posture to an auditor — or verify that it actually works.
 
 > **The series:**
-> - [Data protection in BigQuery](/posts/2026/05/13/bigquery-data-protection/)
+> - [Data protection in BigQuery](/posts/2026/05/17/bigquery-data-protection/)
 > - [Data protection in Databricks Unity Catalog](/posts/2026/05/13/databricks-unity-catalog-data-protection/)
 > - [Data policy overlay vendors: Immuta, Privacera, OneTrust, Lake Formation](/posts/2026/05/13/data-policy-overlay-vendors/)
 > - [Data governance as code: dbt + Terraform patterns](/posts/2026/05/13/data-governance-as-code-dbt-terraform/)
@@ -91,7 +91,7 @@ The six properties above define what you need to defend. These ten areas define 
 
 Strong IAM granularity, mature KMS options, and a real perimeter with VPC Service Controls. The rough edge is wiring DLP, tags, and policy together without drift.
 
-→ Deep dive: [Data protection in BigQuery](/posts/2026/05/13/bigquery-data-protection/)
+→ Deep dive: [Data protection in BigQuery](/posts/2026/05/17/bigquery-data-protection/)
 
 ### Databricks (Unity Catalog)
 
@@ -144,7 +144,7 @@ The recurring findings, summarized. The deep-dive covers recovery patterns for e
 
 This post pulls from each deep-dive's reference list. The deep-dive posts hold the full per-section citations.
 
-- BigQuery deep-dive Sources: see [Data protection in BigQuery](/posts/2026/05/13/bigquery-data-protection/#sources)
+- BigQuery deep-dive Sources: see [Data protection in BigQuery](/posts/2026/05/17/bigquery-data-protection/#sources)
 - Databricks deep-dive Sources: see [Data protection in Databricks Unity Catalog](/posts/2026/05/13/databricks-unity-catalog-data-protection/#sources)
 - Overlay vendors deep-dive Sources: see [Data policy overlay vendors](/posts/2026/05/13/data-policy-overlay-vendors/#sources)
 - IaC deep-dive Sources: see [Data governance as code](/posts/2026/05/13/data-governance-as-code-dbt-terraform/#sources)

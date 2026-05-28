@@ -2,9 +2,9 @@
 title: "Data Protection in BigQuery: A Field Guide"
 description: "How BigQuery layers IAM, policy tags, dynamic masking, RLS, authorized views, VPC Service Controls, CMEK/EKM, and the Knowledge Catalog into a defensible data protection posture — and what it leaves to you."
 tldr: "BigQuery's data protection model lives in IAM, policy tags, and the query engine — not cluster configs. This post walks each control surface from identity to audit log and identifies where the platform's evidence trail has gaps."
-date: 2026-05-13
+date: 2026-05-17
 tags: ["bigquery", "gcp", "security", "governance", "data"]
-draft: true
+draft: false
 faq:
   - q: "Are BigQuery Data Access audit logs enabled by default?"
     a: "Yes, unlike most GCP services. BigQuery enables DATA_READ and DATA_WRITE audit logs by default. However, ADMIN_READ (metadata operations like listing datasets) is still off by default and must be enabled separately."
