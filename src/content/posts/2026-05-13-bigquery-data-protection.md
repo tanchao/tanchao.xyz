@@ -1,6 +1,6 @@
 ---
 title: "Data Protection in BigQuery: A Field Guide"
-description: "How BigQuery layers IAM, policy tags, dynamic masking, RLS, authorized views, VPC Service Controls, CMEK/EKM, and the (renamed) Knowledge Catalog into a defensible data protection posture — and what it leaves to you."
+description: "How BigQuery layers IAM, policy tags, dynamic masking, RLS, authorized views, VPC Service Controls, CMEK/EKM, and the Knowledge Catalog into a defensible data protection posture — and what it leaves to you."
 date: 2026-05-13
 tags: ["bigquery", "gcp", "security", "governance", "data"]
 draft: true
@@ -13,137 +13,181 @@ draft: true
 > [Governance-as-code with dbt + Terraform](/posts/2026/05/13/data-governance-as-code-dbt-terraform/) ·
 > [The third-party auditor's gap list](/posts/2026/05/13/data-platform-auditor-gaps/)
 
-<!-- WRITING PROMPT — opener (1-2 paras):
-   - Set up: BigQuery is a serverless DW. Your protection model lives in IAM, the catalog, and the query engine — not in cluster configs.
-   - Frame: walk the request path: IdP → IAM → dataset/table → column/row policy → masked output → audit log.
-   - Tone: opinionated, ground-truth, like the AI rubrics post.
--->
+BigQuery is a serverless data warehouse. There are no clusters to configure, no storage nodes to harden, no OS patches to schedule. Your entire protection model lives in three places: IAM, the catalog (policy tags and taxonomy), and the query engine (row filters, column masks, authorized views). Everything else — VPC Service Controls, KMS, audit logs — layers on top of those three.
+
+This post walks the request path from identity to audit log, then covers each control surface in detail. The question at every step is the same one from the [overview](/posts/2026/05/13/how-modern-data-platforms-protect-data/): how do you prove the control fired?
 
 ## The request path, end to end
 
-<!-- PROMPT:
-   - Diagram or numbered list of what happens when a user issues SELECT in BigQuery.
-   - Steps: identity (Google Workspace / federated) → IAM check at project/dataset/table → row access policy filter applied → column policy tag check + masking applied → results returned → Cloud Audit Log written.
-   - Cite: access control intro [1], data governance overview [2].
--->
+When a user issues `SELECT * FROM project.dataset.table`, this is what fires:
+
+1. **Identity resolves.** Google Workspace or a federated IdP (Okta, Azure AD, etc.) issues an OAuth token. The principal is a user, group, or service account.
+2. **IAM check at project → dataset → table.** The Resource Manager evaluates whether the principal holds a role with `bigquery.tables.getData` (or equivalent) at the right level. Denied? Query fails with a 403 before touching data.
+3. **Row access policy applies.** If the table has row access policies, the engine injects a predicate filter. Rows the principal is not entitled to never enter the query plan.
+4. **Column policy tag check + masking.** If any selected column carries a policy tag, the engine checks the principal's Fine-Grained Reader role on that tag. If missing, either the query fails (column-level security) or a masking rule rewrites the value (dynamic masking).
+5. **Results return.** The masked, filtered result set is delivered to the client.
+6. **Cloud Audit Log written.** An entry lands in the Data Access log (if enabled) recording who queried what, when, from which IP, and the job metadata.
+
+If a control is not on this path, it does not protect the query. VPC Service Controls protect the *perimeter* (step 0, before the query reaches the service). KMS protects data *at rest* (below step 3). But the access decision itself lives in steps 2–4 [1][2].
 
 ## 1. IAM hierarchy and least privilege
 
-<!-- PROMPT:
-   - Project / dataset / table / view / routine granularity.
-   - Predefined roles vs custom roles vs IAM Conditions.
-   - Service accounts: where they sprawl (scheduled queries, Dataform, Dataflow, Composer).
-   - "Dataset-level is the natural unit" — most teams over-grant at project level.
-   - Cite: control access to resources [10].
--->
+BigQuery IAM operates at five levels of granularity: organization, folder, project, dataset, and table/view/routine. Permissions granted at a higher level inherit downward.
+
+**The natural unit is the dataset.** Most teams over-grant at the project level (`roles/bigquery.dataViewer` on the project gives read access to every dataset in it). The first governance win is moving grants down to dataset level and using IAM Conditions to scope time-bound or attribute-based access.
+
+**Predefined vs custom roles.** The predefined roles (`dataViewer`, `dataEditor`, `dataOwner`, `jobUser`, `admin`) are coarse. In practice, you need custom roles to separate "can query" from "can export" from "can copy to another project." The `bigquery.tables.export` permission is the one most teams forget to restrict.
+
+**Service account sprawl.** Scheduled queries, Dataform, Dataflow pipelines, Cloud Composer DAGs, and Vertex AI training jobs all use service accounts. Each one holds IAM bindings that accumulate over time. The audit question: can you list every service account with data access, and for each, show the last time it actually used that access?
+
+**IAM Conditions.** Conditions let you scope grants by time, resource name, or request attribute. Example: grant `dataViewer` only on datasets whose name starts with `analytics_` and only during business hours. Conditions are the closest BigQuery gets to ABAC without policy tags [10].
 
 ## 2. Policy tags: BigQuery's classification primitive
 
-<!-- PROMPT:
-   - Policy tags live in a Data Catalog taxonomy and bind to columns.
-   - Two uses: column-level access control (CLS) and dynamic data masking.
-   - The taxonomy is the lever — designing the taxonomy is the actual governance work.
-   - Anti-pattern: tagging at table create time instead of in CI / classification scan.
-   - Cite: column-level security intro [3], implement column-level control [4].
--->
+Policy tags are the most important governance primitive BigQuery offers. They live in a Data Catalog taxonomy (a tree of labels you define) and bind to individual columns. Once bound, a policy tag does two things:
+
+1. **Column-level security (CLS):** The column becomes invisible to any principal who lacks the `Fine-Grained Reader` role on that tag. Queries that reference the column fail outright.
+2. **Dynamic data masking:** Instead of blocking access, a masking rule rewrites the column value based on the reader's group membership.
+
+**The taxonomy is the real governance work.** Designing the tag hierarchy — `PII > email`, `PII > SSN`, `Financial > revenue`, `Internal > draft` — determines what policies you can express. A flat taxonomy forces one-off grants. A well-structured tree lets you grant at an interior node and cover all children.
+
+**Anti-pattern: tagging at table creation time.** If policy tags are applied manually when someone creates a table, they drift the moment a new column is added or a pipeline recreates the table. Tags should originate from a classification scan (Sensitive Data Protection) or from CI (Terraform applying tags on every deploy). Manual tagging is folklore — you cannot prove it is current [3][4].
 
 ## 3. Dynamic data masking
 
-<!-- PROMPT:
-   - Masking rules attach to a policy tag; readers see substituted values based on their group.
-   - Built-in masking routines (NULL, default value, hash SHA256, last-4, email, date-year).
-   - Custom UDF masking via authorized routines.
-   - Cite: column data masking intro [5].
--->
+Dynamic data masking attaches a masking rule to a policy tag. When a principal queries a tagged column and does not hold the unmasked reader role, the engine substitutes a masked value instead of blocking the query.
+
+**Built-in masking routines:**
+
+- `NULL` — replaces with null
+- Default value — replaces with a type-appropriate zero/empty string
+- SHA-256 hash — deterministic pseudonymization (same input always produces same hash)
+- Last four characters — useful for partial card numbers or SSNs
+- Email mask — preserves domain, masks local part
+- Date: year only — truncates to year
+
+**Custom masking via authorized routines.** When built-in routines are not enough, you write a UDF and register it as the masking routine for a policy tag. The UDF runs with the elevated privileges of its owning dataset (an authorized routine), so it can apply business logic the caller cannot see or bypass.
+
+**The composition model.** A single column can wear one policy tag. That tag can enforce either CLS (block) or masking (rewrite), not both simultaneously on the same principal. The decision tree: if a principal has Fine-Grained Reader, they see the raw value. If they have Masked Reader, they see the masked value. If they have neither, the query fails [5].
 
 ## 4. Row-level security
 
-<!-- PROMPT:
-   - Row access policies = predicate filters with grantee lists, evaluated at query time.
-   - Compose with CLS: a user can be filtered out of rows AND see masked columns simultaneously.
-   - Performance: the filter is a planner-level predicate, not a post-filter.
-   - Anti-pattern: trying to do RLS via authorized views when row policies are the right tool.
-   - Cite: row-level security intro [6].
--->
+Row access policies are SQL predicates attached to a table with a grantee list. When a query runs, the engine injects the predicate as a planner-level filter — rows that do not satisfy the policy are excluded from the scan, not filtered after the fact.
+
+```sql
+CREATE ROW ACCESS POLICY region_filter
+ON project.dataset.customers
+GRANT TO ("group:emea-analysts@example.com")
+FILTER USING (region = 'EMEA');
+```
+
+**Composition with CLS.** A principal can be simultaneously filtered by row policies and masked on columns. The two mechanisms are orthogonal — row policies decide *which* rows, column policies decide *what* they see in those rows.
+
+**Performance.** Because the filter is injected at plan time, BigQuery can push it into the storage layer. There is no hidden full-table scan followed by a discard. On partitioned/clustered tables, the row policy predicate composes with partition pruning.
+
+**Anti-pattern: RLS via authorized views.** Before row access policies existed (GA 2022), teams built authorized views with `SESSION_USER()` predicates. These still work but carry maintenance overhead — every new table needs a new view, and you cannot centrally audit which predicates apply where. Row policies are the right tool unless your access logic requires complex joins or business logic that only a view can express [6].
 
 ## 5. Authorized views, datasets, and routines
 
-<!-- PROMPT:
-   - The classic "share a query, not a table" pattern.
-   - Authorized datasets scale this — grant a whole dataset of views once.
-   - Authorized routines do the same for table functions, UDFs, and stored procedures.
-   - When to reach for these vs RLS+CLS: complex joins, business logic, derived metrics.
-   - Cite: authorized views [7], authorized datasets [8], authorized routines [9].
--->
+The authorized pattern is BigQuery's "share a query, not a table" primitive. An authorized view runs with the permissions of its *owning* dataset, not the calling user. This means the caller can query the view without having direct access to the underlying tables.
+
+**Authorized datasets** scale this pattern. Instead of authorizing individual views, you authorize an entire dataset. Every view and routine in that dataset inherits the elevation. This is the pattern for exposing a governed analytics layer: raw data in one dataset (locked down), curated views in another (broadly accessible).
+
+**Authorized routines** extend the same trust model to table functions, UDFs, and stored procedures. A UDF in an authorized dataset can read tables the caller cannot — useful for aggregation services, anonymization functions, or metric definitions that should not expose raw inputs.
+
+**When to use authorized patterns vs RLS + CLS:**
+
+- **Authorized views/routines:** When the access logic requires joins, aggregations, or transformations that cannot be expressed as a simple predicate or mask.
+- **RLS + CLS:** When the table structure is the correct interface and you just need to restrict which rows or columns a principal sees.
+
+Mixing both is common. A governed analytics dataset might contain authorized views that read from RLS-protected tables with CLS-masked columns [7][8][9].
 
 ## 6. VPC Service Controls
 
-<!-- PROMPT:
-   - The IAM-orthogonal control: a network perimeter that stops data exfiltration even with valid creds.
-   - Stops things like "service account credentials leaked → attacker copies tables to their project".
-   - The perimeter pattern: separate ingress/egress rules, service perimeter bridges, access levels.
-   - Operational pain: VPC-SC violations are noisy until your access levels match reality.
-   - Cite: VPC SC for BigQuery [11].
--->
+VPC Service Controls (VPC-SC) are orthogonal to IAM. IAM answers "does this principal have permission?" VPC-SC answers "is this request coming from an allowed network context?" A principal can hold `dataViewer` and still be blocked if their request originates outside the perimeter.
+
+**The exfiltration scenario VPC-SC stops:** An attacker obtains service account credentials (leaked in a log, stolen from a CI runner). Without VPC-SC, they can use those credentials from any IP to copy tables to their own project. With VPC-SC, the request is denied because it originates outside your perimeter — even though the credentials are valid.
+
+**The perimeter model:**
+
+- **Service perimeter:** A boundary around one or more GCP projects. BigQuery API calls crossing the boundary are denied.
+- **Ingress rules:** Allow specific principals from specific sources (IP ranges, other perimeters) to call specific services.
+- **Egress rules:** Allow data to leave the perimeter to specific destinations.
+- **Access levels:** Context-aware conditions (corporate network, managed device, geo) that gate ingress.
+
+**Operational reality.** VPC-SC is the single most operationally painful control in GCP. The violations are noisy until your access levels match the reality of where your users and service accounts actually operate. Plan for a "dry-run" period — VPC-SC supports a dry-run mode that logs would-be violations without blocking them. Run dry-run for weeks before enforcing [11].
 
 ## 7. CMEK, Cloud EKM, and column-level AEAD
 
-<!-- PROMPT:
-   - Three layers of "you control the key":
-     1. CMEK (Cloud KMS keys) — Google holds the HSM, you hold the policy.
-     2. Cloud EKM — the key material lives in your external KMS (Fortanix, Equinix SmartKey, Thales, etc.).
-     3. AEAD column encryption — selective encryption of specific columns referencing KMS keys.
-   - Auditability: KMS audit logs become the second source of truth alongside BigQuery audit logs.
-   - The key custody question an auditor will ask: who can read the key, who can rotate it, what triggers rotation.
-   - Cite: CMEK [12], encryption at rest [13], column AEAD [14].
--->
+BigQuery encrypts all data at rest by default with Google-managed keys. Three opt-in layers give you progressively more key custody:
+
+**1. CMEK (Customer-Managed Encryption Keys).** You create a key in Cloud KMS. BigQuery uses it to encrypt your datasets. Google holds the HSM; you hold the IAM policy that governs who can use the key. You can disable or destroy the key to render data unreadable — a hard kill switch.
+
+**2. Cloud EKM (External Key Manager).** The key material lives in your own external KMS (Fortanix, Thales CipherTrust, Equinix SmartKey, etc.). Google never sees the key plaintext. Every encryption/decryption operation calls out to your KMS. You get a real-time veto: disable the external key and BigQuery cannot read the data, even if Google's infrastructure is compromised.
+
+**3. Column-level AEAD encryption.** Selective encryption of individual column values using `AEAD.ENCRYPT` / `AEAD.DECRYPT` SQL functions with a KMS-managed key. The ciphertext is stored in the column; only callers who hold `cloudkms.cryptoKeyVersions.useToDecrypt` on the referenced key can read the plaintext. This is application-layer encryption inside the warehouse.
+
+**The auditor's question:** Who can use the key? Who can rotate it? What triggers rotation? The answers live in Cloud KMS audit logs — a second evidence trail alongside BigQuery's own audit logs. If you use CMEK or EKM, your compliance story now spans two log sources [12][13][14].
 
 ## 8. Sensitive Data Protection (Cloud DLP)
 
-<!-- PROMPT:
-   - The classification engine BigQuery does not have natively.
-   - Inspection / profiling / de-identification jobs against tables.
-   - The pattern: SDP scan → infoTypes detected → write findings → driver job tags policy taxonomy.
-   - This is where classification *should* originate; tagging by hand drifts.
-   - Cite: SDP scan with BigQuery [15].
--->
+BigQuery does not have a native classification engine. Sensitive Data Protection (SDP, formerly Cloud DLP) fills this gap as a separate service.
 
-## 9. The Knowledge Catalog (née Dataplex Universal Catalog, née Data Catalog)
+**The workflow:**
 
-<!-- PROMPT:
-   - Naming history: Data Catalog → Dataplex Universal Catalog → Knowledge Catalog (verify name at publish time).
-   - What it actually does for protection: holds the policy tag taxonomy, lineage, classification, business glossary.
-   - The unification story: one catalog that BigQuery, AlloyDB, Cloud Storage, and Vertex AI all read from.
-   - The lineage gap an auditor will ask about: derived tables, ML feature tables, BigQuery ML models.
-   - Cite: Knowledge Catalog with BigQuery [16], transition guide [17], unified governance blog [18].
--->
+1. **Inspection job** scans a table or dataset for sensitive data (infoTypes: `CREDIT_CARD_NUMBER`, `US_SOCIAL_SECURITY_NUMBER`, `EMAIL_ADDRESS`, 150+ built-in detectors).
+2. **Profiling** runs on a schedule and produces a sensitivity score per column.
+3. **Findings** land in a BigQuery findings table or Security Command Center.
+4. **A driver job** (yours to build) reads the findings and applies or updates policy tags in the Data Catalog taxonomy.
+
+**Why this matters for governance.** Policy tags are only as good as their coverage. If a new column with PII appears in a table and nobody tags it, the policy does not fire. SDP is the detection loop that closes this gap — but you have to wire it. The scan → tag pipeline is not built-in; it is your automation to maintain.
+
+**Anti-pattern: relying on manual classification.** If your policy tags are applied by a human at table creation time and never re-scanned, classification drifts. The correct pattern is: SDP scan detects → findings trigger a Cloud Function or Workflows pipeline → pipeline calls the Data Catalog API to apply or update tags → policy fires on next query [15].
+
+## 9. The Knowledge Catalog
+
+Google has renamed this surface twice: Data Catalog → Dataplex Universal Catalog → Knowledge Catalog (current as of early 2026; verify at publish time). The underlying primitive is the same: a centralized metadata store that holds:
+
+- **Policy tag taxonomies** — the classification trees that CLS and masking reference.
+- **Business glossary** — human-readable definitions of data assets.
+- **Lineage** — table and column lineage captured from BigQuery jobs.
+- **Data quality rules** — validation checks attached to tables.
+
+**What it does for protection:** The Knowledge Catalog is where the policy tag taxonomy lives. Without it, you cannot create policy tags, which means no CLS and no masking. It is the control-plane backing store.
+
+**The unification story.** Google's pitch is one catalog that BigQuery, AlloyDB, Spanner, Cloud Storage, and Vertex AI all read from. In practice, lineage coverage is uneven. BigQuery SQL jobs produce lineage automatically. Dataflow, Dataproc, and BQML training jobs have partial or no lineage capture. If an auditor asks "where did this column's data originate?" and the answer crosses a Dataflow pipeline, you may not have the lineage edge.
+
+**The auditor question:** Show me the lineage for this derived table back to its source. If the path crosses a non-SQL engine (Dataflow, Spark on Dataproc, a custom Python pipeline), expect a gap [16][17][18].
 
 ## 10. Cloud Audit Logs: your evidence pack
 
-<!-- PROMPT:
-   - Three log streams: Admin Activity (always on), Data Access (off by default — TURN IT ON), System Event.
-   - Without Data Access logs, you cannot prove who read what column. Auditors will fail you.
-   - Sink the logs to a separate project the production project cannot write to (tamper resistance).
-   - Cite: BigQuery audit log reference [19].
--->
+BigQuery writes to three Cloud Audit Log streams:
+
+- **Admin Activity** (always on, free): WHO created/deleted/modified datasets, tables, and policies.
+- **Data Access** (off by default, costs apply): WHO queried WHICH tables, with job metadata.
+- **System Event** (always on, free): system-level operations like BigQuery Storage API reads.
+
+**The critical gap: Data Access logs are off by default.** Without them, you cannot prove who read what table, let alone which columns were returned. An auditor will ask for evidence that a specific principal accessed a specific table on a specific date. If Data Access logs are not enabled, you cannot answer. Turn them on for every project that holds governed data.
+
+**Tamper resistance.** Audit logs should be sunk to a separate project that the production project's principals cannot write to. The pattern: create a logging project, create a log sink in the production project that routes to the logging project, grant `logging.logWriter` only to the sink's service account. Now even a compromised admin in the production project cannot delete the evidence.
+
+**What the log contains:** Project, dataset, table, columns accessed, job ID, caller identity, caller IP, timestamp, bytes scanned, and whether row/column policies were evaluated. This is your evidence pack for any access dispute [19].
 
 ## What BigQuery does well
 
-<!-- PROMPT — short, opinionated bullets:
-   - IAM at five levels of granularity, all in one consistent model.
-   - Policy tags as a first-class classification primitive (rare in cloud DWs).
-   - VPC-SC is a real network perimeter, not just a firewall.
-   - CMEK + EKM coverage is mature.
--->
+- **IAM at five levels of granularity** (org, folder, project, dataset, table/view/routine), all in one consistent model with inheritance and conditions.
+- **Policy tags as a first-class primitive.** Column-level security and dynamic masking keyed off a shared classification taxonomy is rare among cloud data warehouses.
+- **VPC Service Controls** provide a real network-level perimeter — not just a firewall rule, but a context-aware boundary that blocks exfiltration independent of IAM.
+- **Mature key custody.** CMEK, EKM, and column AEAD cover the full spectrum from "I control the policy" to "I control the key material" to "I encrypt individual values."
+- **Row policies compose with column policies.** The two access control dimensions (which rows, which columns) are orthogonal and enforced at plan time.
 
 ## What BigQuery leaves to you
 
-<!-- PROMPT — short, opinionated bullets:
-   - Classification: SDP is separate, integration is yours to wire.
-   - Lineage: still uneven for derived / BQML / Dataflow paths.
-   - Policy-as-code: Terraform providers exist but composition with dbt is a manual layering job (covered in the IaC post).
-   - Cross-project / cross-org sharing via Analytics Hub: a separate audit surface most teams miss.
--->
+- **Classification automation.** Sensitive Data Protection is a separate service. The scan → detect → tag pipeline is yours to build and maintain. Without it, policy tags drift.
+- **Lineage beyond SQL.** Lineage is automatic for BigQuery SQL jobs but partial or absent for Dataflow, Dataproc, BQML, and custom pipelines. If your derived tables cross these boundaries, you have blind spots.
+- **Policy-as-code composition.** Terraform providers for BigQuery and Data Catalog exist, but composing them with dbt (which owns the table schemas) requires manual layering. This is covered in the [IaC deep-dive](/posts/2026/05/13/data-governance-as-code-dbt-terraform/).
+- **Cross-project sharing via Analytics Hub.** Analytics Hub is a separate sharing surface with its own access model and audit trail. Most teams miss it as an attack surface — a shared dataset listed in Analytics Hub is accessible to any subscriber who accepted the listing.
+- **Data Access log costs.** Enabling Data Access logs on high-query-volume projects generates substantial log volume. Budget for it, or use exclusion filters to scope logging to governed datasets only.
 
 ---
 
@@ -169,8 +213,3 @@ draft: true
 18. Unified Dataplex + Data Catalog governance (Cloud Blog) — <https://cloud.google.com/blog/products/data-analytics/manage-and-govern-data-with-the-unified-dataplex-and-data-catalog>
 19. BigQuery audit logs reference — <https://cloud.google.com/bigquery/docs/reference/auditlogs>
 20. Trusting your data on Google Cloud (whitepaper) — <https://cloud.google.com/security/compliance/trusting_data_gcp_whitepaper>
-
-<!-- VERIFY-AT-PUBLISH:
-   - Knowledge Catalog naming (sections 2, 9) — Google has renamed this surface twice in two years.
-   - Cloud EKM provider list (section 7) — partner roster shifts.
--->
