@@ -3,7 +3,7 @@ title: "How Modern Data Platforms Protect Data"
 description: "A short, practical overview of how BigQuery, Databricks, Immuta, and Lake Formation protect data in practice — and where teams usually get exposed."
 date: 2026-05-13
 tags: ["data", "security", "governance", "bigquery", "databricks", "immuta"]
-draft: true
+draft: false
 ---
 
 Every cloud data warehouse says it has strong governance. The useful question is simpler: when a query runs, what control fires, and what proof do you have?
