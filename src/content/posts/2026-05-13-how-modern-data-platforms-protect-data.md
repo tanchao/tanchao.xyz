@@ -8,9 +8,9 @@ draft: true
 
 Every cloud data warehouse says it has strong governance. The useful question is simpler: when a query runs, what control fires, and what proof do you have?
 
-This is not a tutorial. I use one shared lens across BigQuery, Databricks Unity Catalog, policy overlays (Immuta, Privacera, OneTrust, Lake Formation), and the dbt + Terraform layer. Each deep-dive goes into detail. This post is the short map.
+This post is a shared evaluation lens for data protection across BigQuery, Databricks Unity Catalog, policy overlays (Immuta, Privacera, OneTrust, Lake Formation), and the dbt + Terraform layer. It gives you one request-path model and ten control areas that apply to any platform. The deep-dives apply the lens platform by platform.
 
-Snowflake gets its own series. It is intentionally not here.
+The audience is the engineer or architect who needs to explain their platform's protection posture to an auditor — or verify that it actually works.
 
 > **The series:**
 > - [Data protection in BigQuery](/posts/2026/05/13/bigquery-data-protection/)
@@ -21,16 +21,16 @@ Snowflake gets its own series. It is intentionally not here.
 
 ## What "data protection" means here
 
-I use a narrow definition. A platform is protecting data only if it can defend these six properties in front of an auditor:
+A platform protects data if it can defend six properties in front of an auditor. Each one maps to a specific failure an auditor will write up:
 
-- **Confidentiality** — the wrong principal cannot read the wrong bytes.
-- **Integrity** — the bytes are what the writer wrote.
-- **Availability** — the data is reachable to the right principals when the SLA says so.
-- **Privacy** — personal data is minimized, masked, or transformed before it leaves the perimeter.
-- **Auditability** — every access decision is logged in a way a third party can reconstruct.
-- **Lineage and residency** — you know where each byte came from and which jurisdiction it lives in.
+- **Confidentiality** — the wrong principal cannot read the wrong bytes. Failure: an analyst pulls a table they were never granted and nobody noticed.
+- **Integrity** — the bytes are what the writer wrote. Failure: a pipeline silently overwrites production data and there is no before-image to compare.
+- **Availability** — the data is reachable to the right principals when the SLA says so. Failure: a key rotation locks out every downstream consumer for four hours.
+- **Privacy** — personal data is minimized, masked, or transformed before it leaves the perimeter. Failure: a DSAR arrives and you cannot enumerate where the subject's data lives.
+- **Auditability** — every access decision is logged in a way a third party can reconstruct. Failure: the auditor asks "who read this table last Tuesday?" and you cannot answer.
+- **Lineage and residency** — you know where each byte came from and which jurisdiction it lives in. Failure: a derived table contains PII from an EU source and lands in a US region with no record of how it got there.
 
-Out of scope here: physical security, generic corporate IAM hygiene, app-layer encryption inside the calling service. The lens is the warehouse: when a query runs, what stops the wrong data from coming back, and how do you prove the control fired?
+The scope is the warehouse layer: when a query runs, what stops the wrong data from coming back, and how do you prove the control fired? Physical security, corporate IAM hygiene, and app-layer encryption are out of scope.
 
 ## The end-to-end request path
 
@@ -46,23 +46,6 @@ A query is the natural unit of analysis because every control either fires on th
 If a control is not on this list, it is not protecting the query — it is supporting evidence (key custody, classification scans, lineage capture) that makes the controls on this list trustworthy.
 
 The verification question at every step is the same: **show me the log line.** A control that cannot produce a queryable audit record is folklore.
-
-## The ten control areas
-
-These are the ten areas I use throughout the series. For each one, the question is not "does the UI exist?" but "how do you prove it fired?"
-
-1. **Identity and coarse access** — IAM, groups, and project or workspace boundaries. Check: pull effective permissions from the API, not just the UI.
-2. **Fine-grained access** — table, row, column, and view controls. Check: run the same query as a privileged and restricted user.
-3. **Masking and tokenization** — dynamic masking, tokenization, and aggregation. Check: show the rewritten result and the rule that caused it.
-4. **Classification and tagging** — the labels that ABAC and masking depend on. Check: show the latest scan or tag change and the policy consuming it.
-5. **Lineage** — where sensitive data flows downstream. Check: start with one sensitive column and trace derived tables, dashboards, and models.
-6. **Audit and observability** — the evidence trail. Check: find the log line by principal, object, and time.
-7. **Encryption and key custody** — CMEK, EKM, AEAD, and split-key models. Check: show the key, who can use it, and the last rotation event.
-8. **Network isolation** — private paths, perimeters, and egress rules. Check: show the config and at least one denied event.
-9. **Data sharing** — internal and external sharing paths. Check: list every share, who received it, and its expiry or agreement.
-10. **Residency and sovereignty** — where data lives and where it can move. Check: show the region settings and any cross-region path.
-
-Each deep-dive uses the same ten areas.
 
 ## The layered control model
 
@@ -86,6 +69,21 @@ Three notes:
 **IaC needs a clean split.** dbt should own model-bound metadata. Terraform should own platform policy, network, and key settings.
 
 **Audit is the proof.** If you cannot query the log by principal, object, and time, the control is not ready for audit.
+
+## The ten control areas
+
+The six properties above define what you need to defend. These ten areas define where you look. Each deep-dive evaluates a platform against all ten. The question for each is not "does the UI exist?" but "how do you prove it fired?"
+
+1. **Identity and coarse access** — IAM, groups, and project or workspace boundaries. Check: pull effective permissions from the API, not just the UI.
+2. **Fine-grained access** — table, row, column, and view controls. Check: run the same query as a privileged and restricted user.
+3. **Masking and tokenization** — dynamic masking, tokenization, and aggregation. Check: show the rewritten result and the rule that caused it.
+4. **Classification and tagging** — the labels that ABAC and masking depend on. Check: show the latest scan or tag change and the policy consuming it.
+5. **Lineage** — where sensitive data flows downstream. Check: start with one sensitive column and trace derived tables, dashboards, and models.
+6. **Audit and observability** — the evidence trail. Check: find the log line by principal, object, and time.
+7. **Encryption and key custody** — CMEK, EKM, AEAD, and split-key models. Check: show the key, who can use it, and the last rotation event.
+8. **Network isolation** — private paths, perimeters, and egress rules. Check: show the config and at least one denied event.
+9. **Data sharing** — internal and external sharing paths. Check: list every share, who received it, and its expiry or agreement.
+10. **Residency and sovereignty** — where data lives and where it can move. Check: show the region settings and any cross-region path.
 
 ## The platforms at a glance
 
@@ -120,9 +118,9 @@ Not a platform. This is the layer that keeps the others consistent. The clean sp
 - **Immuta** — Strongest at heterogeneous estates, advanced masking, and purpose-based access. Weakest at IaC ergonomics; the Terraform story is thinner than the policy story.
 - **Lake Formation** — Strongest at AWS-native consistency and S3 Tables / Iceberg. Weakest at multi-cloud, by design — it does not try.
 
-## TL;DR of where auditors find gaps
+## Where auditors find gaps
 
-The recurring gap list, summarized; the deep-dive covers the recovery patterns:
+The recurring findings, summarized. The deep-dive covers recovery patterns for each:
 
 - Service-account sprawl, especially around scheduled queries, Dataform, and Composer.
 - Lineage gaps for derived and ML feature tables, where the catalog stops capturing.
