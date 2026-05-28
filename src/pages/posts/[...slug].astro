@@ -22,7 +22,7 @@ export async function getStaticPaths() {
 }
 
 const { post, prevPost, nextPost } = Astro.props;
-const { Content } = await render(post);
+const { Content, headings } = await render(post);
 const body = post.body ?? "";
 const rt = readingTime(body);
 const wc = wordCount(body);
@@ -41,6 +41,8 @@ const relatedPosts = allPosts
 <Post
   title={post.data.title}
   description={post.data.description}
+  tldr={post.data.tldr}
+  faq={post.data.faq}
   date={post.data.date}
   updated={post.data.updated}
   tags={post.data.tags}
@@ -50,6 +52,7 @@ const relatedPosts = allPosts
   readingTime={rt}
   wordCount={wc}
   noindex={post.data.draft}
+  headings={headings}
   prevPost={prevPost}
   nextPost={nextPost}
   relatedPosts={relatedPosts}

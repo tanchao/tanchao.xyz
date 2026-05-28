@@ -11,6 +11,7 @@ import { join } from "node:path";
 const postSchema = z.object({
   title: z.string().max(80),
   description: z.string().optional(),
+  tldr: z.string().optional(),
   date: z.coerce.date(),
   updated: z.coerce.date().optional(),
   tags: z.array(z.string()).default([]),

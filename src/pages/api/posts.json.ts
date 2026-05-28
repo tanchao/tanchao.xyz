@@ -6,7 +6,7 @@ export const GET: APIRoute = async () => {
   const posts = sortedPosts(await getCollection("posts"));
   const data = posts.map(post => ({
     title: post.data.title,
-    description: post.data.description ?? null,
+    description: post.data.description ?? post.data.tldr ?? null,
     date: post.data.date.toISOString().split("T")[0],
     updated: post.data.updated?.toISOString().split("T")[0] ?? null,
     tags: post.data.tags,

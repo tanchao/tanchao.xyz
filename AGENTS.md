@@ -89,6 +89,10 @@ Posts (`src/content/posts/`) frontmatter (all fields):
 ---
 title: "Post Title"          # required, max 80 chars
 description: "..."           # optional but strongly recommended for SEO
+tldr: "..."                  # optional; one-sentence summary for GEO extraction
+faq:                         # optional; pillar posts — renders FAQ + FAQPage JSON-LD
+  - q: "Question?"
+    a: "Direct answer."
 date: 2024-01-15             # required, YYYY-MM-DD
 updated: 2024-02-01          # optional
 tags: ["career", "api"]      # optional array
@@ -205,6 +209,27 @@ When writing or editing content for `src/content/**`, treat `tanchao.xyz` as a p
 - Let the `description` carry the framing such as "short, practical overview" or "field guide."
 - Avoid terms like `survey`, `taxonomy`, `framework`, `comprehensive`, `definitive`, or `some thoughts on` unless they are clearly the best wording for the piece.
 - Avoid sections like "why this taxonomy is the right one" or other wording that tries to self-prove the argument. The content itself should do that work.
+
+### GEO (Generative Engine Optimization)
+
+Structure content so AI systems can cite it accurately. See `docs/plans/geo.md` for the full plan and `docs/plans/geo-tracking.md` for measurement.
+
+- **Answer capsule** — first paragraph answers the title in 40–60 words, definition-lead (`X is ...`).
+- **Atomic H2s** — each `## section` opens with a self-contained 40–100 word paragraph that fully answers the heading without surrounding context.
+- **Citation density** — on long-form posts, aim for one hyperlinked citation to a primary source (NIST, RFC, vendor docs, peer-reviewed studies) per ~150–200 words.
+- **Named entities** — include 3+ named entities (products, people, standards, version numbers, dates) per paragraph you want extracted.
+- **FAQ blocks** — pillar posts: 5–7 `faq` items in frontmatter (see schema below). Short questions, direct answers.
+- **Freshness** — refresh `updated:` on evergreen posts at least quarterly when content still applies.
+- **Series linking** — when a post belongs to a series, add a top-of-post block internal-linking sibling posts.
+
+Optional post frontmatter for GEO:
+
+```yaml
+tldr: "One-sentence summary for extraction."
+faq:
+  - q: "Short question?"
+    a: "Direct, citable answer."
+```
 
 ## Git workflow
 

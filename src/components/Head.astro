@@ -70,13 +70,26 @@ const fullTitle = title === "tanchao's blog" ? title : `${title} — tanchao's b
   <meta property="article:author" content="Chao Tan" />
 )}
 
-<!-- Feeds -->
+<!-- Feeds & LLM discovery -->
 <link
   rel="alternate"
   type="application/rss+xml"
   href={`${siteUrl}/rss.xml`}
   title="tanchao's blog RSS Feed"
 />
+<link
+  rel="alternate"
+  type="text/plain"
+  href={`${siteUrl}/llms.txt`}
+  title="LLMs.txt"
+/>
+<link
+  rel="alternate"
+  type="text/plain"
+  href={`${siteUrl}/llms-full.txt`}
+  title="LLMs full text"
+/>
+<link rel="manifest" href="/site.webmanifest" />
 
 <!-- Favicon & Icons -->
 <link rel="icon" href="/favicon.ico" sizes="32x32" />

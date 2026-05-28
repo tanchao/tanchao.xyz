@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build && npx pagefind --site dist",
+    "build": "astro build && npx pagefind --site dist && npx tsx scripts/indexnow-ping.ts",
     "preview": "astro preview",
     "astro": "astro",
     "check": "astro check",
@@ -36,6 +36,7 @@
     "@types/turndown": "^5.0.6",
     "expressive-code": "^0.42.0",
     "fast-xml-parser": "^5.7.3",
+    "marked": "^18.0.4",
     "pagefind": "^1.5.2",
     "tsx": "^4.21.0",
     "turndown": "^7.2.4",
