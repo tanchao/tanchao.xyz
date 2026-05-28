@@ -31,7 +31,7 @@ This post walks the request path from identity to audit log, then covers each co
 
 ## The request path, end to end
 
-Every BigQuery access control fires somewhere on the request path between identity resolution and audit emission. Understanding this path is the prerequisite for evaluating any individual control — if a mechanism is not on this path, it does not protect the query at runtime. When a user issues `SELECT * FROM project.dataset.table`, this is what fires:
+Every BigQuery access control fires somewhere on the request path between identity resolution and audit emission. If a mechanism is not on this path, it does not protect the query at runtime — it is supporting infrastructure. When a user issues `SELECT * FROM project.dataset.table`, this is what fires:
 
 1. **Identity resolves.** Google Workspace or a federated IdP (Okta, Azure AD, etc.) issues an OAuth token. The principal is a user, group, or service account.
 2. **IAM check at project → dataset → table.** The Resource Manager evaluates whether the principal holds a role with `bigquery.tables.getData` (or equivalent) at the right level. Denied? Query fails with a 403 before touching data.
@@ -40,7 +40,7 @@ Every BigQuery access control fires somewhere on the request path between identi
 5. **Results return.** The masked, filtered result set is delivered to the client.
 6. **Cloud Audit Log written.** An entry lands in the Data Access log (if enabled) recording who queried what, when, from which IP, and the job metadata.
 
-If a control is not on this path, it does not protect the query. VPC Service Controls protect the *perimeter* (step 0, before the query reaches the service). KMS protects data *at rest* (below step 3). But the access decision itself lives in steps 2–4 (see [BigQuery access controls](https://cloud.google.com/bigquery/docs/access-control-intro) and [data governance overview](https://cloud.google.com/bigquery/docs/data-governance)).
+If a control is not on this path, it is supporting infrastructure. VPC Service Controls protect the *perimeter* (step 0, before the query reaches the service). KMS protects data *at rest* (below step 3). But the access decision itself lives in steps 2–4 (see [BigQuery access controls](https://cloud.google.com/bigquery/docs/access-control-intro) and [data governance overview](https://cloud.google.com/bigquery/docs/data-governance)).
 
 ## 1. IAM hierarchy and least privilege
 
@@ -90,7 +90,7 @@ The edge case that bites real orgs: if a principal holds Fine-Grained Reader on 
 
 ## 4. Row-level security
 
-Row-level security (RLS) in BigQuery controls which rows a principal can see within a table by attaching SQL predicates with grantee lists. Row access policies are evaluated at query time as planner-level filters — rows that do not satisfy the policy for the calling principal are excluded before results are assembled, making RLS invisible to the caller except through the absence of rows they cannot access.
+Row-level security (RLS) in BigQuery controls which rows a principal can see within a table. You attach SQL predicates with grantee lists to a table; the engine injects those predicates at query time so that rows the caller is not entitled to are excluded before results are assembled. RLS is invisible to the caller except through the absence of rows.
 
 ```sql
 CREATE ROW ACCESS POLICY region_filter
@@ -101,7 +101,7 @@ FILTER USING (region = 'EMEA');
 
 **Composition with CLS.** A principal can be simultaneously filtered by row policies and masked on columns. The two mechanisms are orthogonal — row policies decide *which* rows, column policies decide *what* they see in those rows.
 
-**Performance.** Row access policies are evaluated at query time as injected predicates. BigQuery handles the filtering, but do not assume the predicate participates in partition pruning or clustering benefits — it does not. A row policy on a partitioned table still requires the engine to evaluate the predicate against scanned rows within the accessed partitions. For large tables, design your row policies with this in mind: a policy that references a non-clustered column on a multi-terabyte table will scan more data than you might expect from the IAM-only path.
+**Performance.** Do not assume row access policy predicates participate in partition pruning or clustering benefits — they do not. A row policy on a partitioned table still requires the engine to evaluate the predicate against scanned rows within the accessed partitions. For large tables, a policy referencing a non-clustered column on a multi-terabyte table will scan more data than you might expect from the IAM-only path.
 
 **Anti-pattern: RLS via authorized views.** Before row access policies existed (GA 2022), teams built authorized views with `SESSION_USER()` predicates. These still work but carry maintenance overhead — every new table needs a new view, and you cannot centrally audit which predicates apply where. Row policies are the right tool unless your access logic requires complex joins or business logic that only a view can express (see [row-level security intro](https://cloud.google.com/bigquery/docs/row-level-security-intro)).
 
@@ -149,7 +149,7 @@ BigQuery encrypts all data at rest by default using Google-managed keys, but thr
 
 ## 8. Sensitive Data Protection (Cloud DLP)
 
-BigQuery does not have a native classification engine — it cannot automatically detect which columns contain PII, financial data, or health records. Sensitive Data Protection (SDP, formerly Cloud DLP) fills this gap as a separate GCP service that inspects, profiles, and de-identifies data. Because policy tags only protect what they cover, SDP is the detection loop that keeps classification current as schemas evolve.
+BigQuery does not have a native classification engine — it cannot automatically detect which columns contain PII, financial data, or health records. Sensitive Data Protection (SDP, formerly Cloud DLP) fills this gap as a separate GCP service that inspects, profiles, and de-identifies data. Without SDP or an equivalent scan, policy tags only cover what someone remembered to tag, and coverage drifts the moment a schema changes.
 
 **The workflow:**
 
@@ -158,7 +158,7 @@ BigQuery does not have a native classification engine — it cannot automaticall
 3. **Findings** land in a BigQuery findings table or Security Command Center.
 4. **A driver job** (yours to build) reads the findings and applies or updates policy tags in the Data Catalog taxonomy.
 
-**Why this matters for governance.** Policy tags are only as good as their coverage. If a new column with PII appears in a table and nobody tags it, the policy does not fire. SDP is the detection loop that closes this gap — but you have to wire it. The scan → tag pipeline is not built-in; it is your automation to maintain.
+The scan → tag pipeline is not built-in. Steps 1–3 are managed by SDP; step 4 is your automation. This is the most important integration to get right — it is the only mechanism that keeps classification current as schemas evolve.
 
 **Anti-pattern: relying on manual classification.** If your policy tags are applied by a human at table creation time and never re-scanned, classification drifts. The correct pattern is: SDP scan detects → findings trigger a Cloud Function or Workflows pipeline → pipeline calls the Data Catalog API to apply or update tags → policy fires on next query (see [SDP scanning for BigQuery](https://cloud.google.com/bigquery/docs/scan-with-dlp)).
 
