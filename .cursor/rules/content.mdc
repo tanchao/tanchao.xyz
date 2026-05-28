@@ -18,6 +18,8 @@ Required fields:
 
 Optional but recommended:
 - `description`: 1-2 sentences, max 160 chars, for SEO meta and feed excerpts
+- `tldr`: one-sentence summary rendered as a TL;DR blockquote and used when `description` is absent
+- `faq`: array of `{ q, a }` objects for pillar posts — renders FAQ section and FAQPage JSON-LD
 - `tags`: array of lowercase kebab-case strings
 - `draft: true` for unpublished posts
 
@@ -42,6 +44,16 @@ Required: `title`, `date`
 - Avoid labels like `survey`, `taxonomy`, `framework`, `comprehensive`, `definitive`, or "some thoughts on" unless they are clearly the best wording
 - Code blocks should use fenced backticks with language identifier
 - Chinese phrases are fine if they add context
+
+## GEO conventions
+
+See `docs/plans/geo.md` for the full plan. When writing posts:
+
+- Open with a 40–60 word answer capsule (definition-lead first paragraph)
+- Each `##` section opens with a self-contained 40–100 word paragraph
+- Long-form posts: one hyperlinked primary-source citation per ~150–200 words
+- Pillar posts: add 5–7 `faq` items in frontmatter
+- Refresh `updated:` quarterly on evergreen content
 
 ## File naming
 

@@ -1,0 +1,21 @@
+{
+  "name": "tanchao's blog",
+  "short_name": "tanchao.xyz",
+  "description": "Chao Tan — data governance, AI security, and engineering.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fafaf8",
+  "theme_color": "#171717",
+  "icons": [
+    {
+      "src": "/favicon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}

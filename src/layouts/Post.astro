@@ -1,9 +1,22 @@
 ---
 import Base from "./Base.astro";
 
+interface FaqItem {
+  q: string;
+  a: string;
+}
+
+interface Heading {
+  depth: number;
+  slug: string;
+  text: string;
+}
+
 interface Props {
   title: string;
   description?: string;
+  tldr?: string;
+  faq?: FaqItem[];
   date: Date;
   updated?: Date;
   tags?: string[];
@@ -13,6 +26,7 @@ interface Props {
   readingTime?: number;
   wordCount?: number;
   noindex?: boolean;
+  headings?: Heading[];
   prevPost?: { title: string; url: string } | null;
   nextPost?: { title: string; url: string } | null;
   relatedPosts?: { title: string; url: string }[];
@@ -21,6 +35,8 @@ interface Props {
 const {
   title,
   description,
+  tldr,
+  faq = [],
   date,
   updated,
   tags = [],
@@ -30,11 +46,13 @@ const {
   readingTime,
   wordCount,
   noindex = false,
+  headings = [],
   prevPost,
   nextPost,
   relatedPosts = [],
 } = Astro.props;
 
+const siteUrl = "https://tanchao.xyz";
 const dateStr = date.toLocaleDateString("en-US", {
   year: "numeric",
   month: "long",
@@ -48,19 +66,19 @@ const updatedStr = updated
     })
   : null;
 
-const siteUrl = "https://tanchao.xyz";
 const postUrl = canonicalUrl ?? new URL(Astro.url.pathname, siteUrl).href;
 const resolvedOg = ogImage
   ? ogImage.startsWith("http")
     ? ogImage
     : new URL(ogImage, siteUrl).href
   : new URL("/og-default.png", siteUrl).href;
+const schemaDescription = description ?? tldr;
 
 const blogPostingSchema = {
   "@context": "https://schema.org",
   "@type": "BlogPosting",
   headline: title,
-  description: description,
+  description: schemaDescription,
   datePublished: date.toISOString(),
   dateModified: (updated ?? date).toISOString(),
   author: {
@@ -94,11 +112,28 @@ const breadcrumbSchema = {
     { "@type": "ListItem", position: 3, name: title, item: postUrl },
   ],
 };
+
+const faqSchema =
+  faq.length > 0
+    ? {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: faq.map(({ q, a }) => ({
+          "@type": "Question",
+          name: q,
+          acceptedAnswer: { "@type": "Answer", text: a },
+        })),
+      }
+    : null;
+
+const jsonLd = [blogPostingSchema, breadcrumbSchema, ...(faqSchema ? [faqSchema] : [])];
+
+const tocHeadings = headings.filter((h) => h.depth === 2);
 ---
 
 <Base
   title={title}
-  description={description}
+  description={schemaDescription}
   canonicalUrl={canonicalUrl}
   ogImage={ogImage}
   type="article"
@@ -106,7 +141,7 @@ const breadcrumbSchema = {
   updatedTime={updated}
   tags={tags}
   noindex={noindex}
-  jsonLd={[blogPostingSchema, breadcrumbSchema]}
+  jsonLd={jsonLd}
 >
   <article>
     <header style="margin-bottom:2rem;">
@@ -130,9 +165,56 @@ const breadcrumbSchema = {
       )}
     </header>
 
+    {tldr && (
+      <blockquote
+        class="tldr"
+        style="background:var(--bg-alt);border-left:3px solid var(--link);padding:1rem 1.25rem;margin:0 0 2rem;font-family:var(--font-serif);font-size:1rem;line-height:1.6;"
+      >
+        <strong style="font-family:var(--font-sans);font-size:0.75rem;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-muted);display:block;margin-bottom:0.5rem;">
+          TL;DR
+        </strong>
+        {tldr}
+      </blockquote>
+    )}
+
+    {tocHeadings.length >= 3 && (
+      <nav
+        aria-label="Table of contents"
+        style="background:var(--bg-alt);border:1px solid var(--border);border-radius:6px;padding:1rem 1.25rem;margin-bottom:2rem;font-family:var(--font-sans);font-size:0.875rem;"
+      >
+        <p style="margin:0 0 0.5rem;font-weight:600;font-size:0.8rem;letter-spacing:0.05em;text-transform:uppercase;color:var(--text-muted);">
+          Contents
+        </p>
+        <ol style="margin:0;padding-left:1.25rem;">
+          {tocHeadings.map(h => (
+            <li style="margin:0.25rem 0;">
+              <a href={`#${h.slug}`} style="color:var(--text-muted);">{h.text}</a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+    )}
+
     <div class="prose">
       <slot />
     </div>
+
+    {faq.length > 0 && (
+      <section
+        aria-label="FAQ"
+        style="margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);"
+      >
+        <h2 style="font-family:var(--font-sans);font-size:1.125rem;margin-bottom:1rem;">FAQ</h2>
+        <dl style="margin:0;">
+          {faq.map(({ q, a }) => (
+            <>
+              <dt style="font-family:var(--font-sans);font-weight:600;margin:1rem 0 0.25rem;">{q}</dt>
+              <dd style="margin:0 0 0.5rem;color:var(--text-muted);">{a}</dd>
+            </>
+          ))}
+        </dl>
+      </section>
+    )}
   </article>
 
   <script>
