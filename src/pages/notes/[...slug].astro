@@ -1,10 +1,11 @@
 ---
 import { getCollection, render } from "astro:content";
 import Base from "../../layouts/Base.astro";
-import { noteSlug } from "../../lib/posts";
+import { noteSlug, sortedNotes } from "../../lib/posts";
 
 export async function getStaticPaths() {
-  const notes = await getCollection("notes");
+  const includeDrafts = !import.meta.env.PROD;
+  const notes = sortedNotes(await getCollection("notes"), includeDrafts);
   return notes.map(note => ({
     params: { slug: noteSlug(note.id) },
     props: { note },
@@ -35,12 +36,19 @@ const blogPostingSchema = {
   author: { "@type": "Person", "@id": "https://tanchao.xyz/#person", name: "Chao Tan" },
   url: noteCanonical,
   ...(note.data.sourceUrl ? { sameAs: note.data.sourceUrl } : {}),
-  isPartOf: { "@type": "Blog", "@id": "https://tanchao.xyz/#website" },
+  isPartOf: { "@type": "WebSite", "@id": "https://tanchao.xyz/#website" },
   inLanguage: "en-US",
 };
 ---
 
-<Base title={note.data.title} type="article" publishedTime={note.data.date} canonicalUrl={noteCanonical} jsonLd={blogPostingSchema}>
+<Base
+  title={note.data.title}
+  type="article"
+  publishedTime={note.data.date}
+  canonicalUrl={noteCanonical}
+  noindex={note.data.draft}
+  jsonLd={blogPostingSchema}
+>
   <article>
     <header style="margin-bottom:2rem;">
       <h1>{note.data.title}</h1>

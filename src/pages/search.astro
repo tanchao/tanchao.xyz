@@ -1,0 +1,34 @@
+---
+import Base from "../layouts/Base.astro";
+
+const q = Astro.url.searchParams.get("q") ?? "";
+---
+
+<Base
+  title="Search"
+  description="Search tanchao.xyz — posts, notes, and pages."
+>
+  <h1 style="font-family:var(--font-sans);margin-bottom:1.5rem;">Search</h1>
+
+  <link href="/pagefind/pagefind-ui.css" rel="stylesheet" />
+  <div id="pagefind-search"></div>
+
+  <script is:inline define:vars={{ initialQuery: q }}>
+    function initPagefind() {
+      if (typeof PagefindUI === "undefined") return;
+      new PagefindUI({
+        element: "#pagefind-search",
+        showSubResults: true,
+        resetStyles: false,
+      });
+      if (initialQuery) {
+        const input = document.querySelector("#pagefind-search input[type='search']");
+        if (input instanceof HTMLInputElement) {
+          input.value = initialQuery;
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      }
+    }
+  </script>
+  <script is:inline src="/pagefind/pagefind-ui.js" onload="initPagefind()"></script>
+</Base>

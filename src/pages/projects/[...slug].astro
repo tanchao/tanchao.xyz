@@ -1,10 +1,11 @@
 ---
 import { getCollection, render } from "astro:content";
 import Base from "../../layouts/Base.astro";
-import { projectSlug } from "../../lib/posts";
+import { projectSlug, sortedProjects } from "../../lib/posts";
 
 export async function getStaticPaths() {
-  const projects = await getCollection("projects");
+  const includeDrafts = !import.meta.env.PROD;
+  const projects = sortedProjects(await getCollection("projects"), includeDrafts);
   return projects.map(project => ({
     params: { slug: projectSlug(project.id) },
     props: { project },
@@ -54,7 +55,7 @@ const creativeWorkSchema = {
   keywords: tags.join(", "),
   inLanguage: "en-US",
   ...(repo ? { codeRepository: repo } : {}),
-  ...(link ? { url: link } : {}),
+  ...(link ? { sameAs: [link] } : {}),
 };
 ---
 
@@ -66,6 +67,7 @@ const creativeWorkSchema = {
   publishedTime={started}
   updatedTime={updated}
   tags={tags}
+  noindex={project.data.draft}
   jsonLd={creativeWorkSchema}
 >
 

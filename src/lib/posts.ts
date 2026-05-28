@@ -51,10 +51,24 @@ export function noteUrl(id: string): string {
   return `/notes/${noteSlug(id)}/`;
 }
 
+/** Count words in markdown/plain text content */
+export function wordCount(content: string): number {
+  return content.trim().split(/\s+/).filter(Boolean).length;
+}
+
 /** Estimate reading time in minutes */
 export function readingTime(content: string): number {
-  const words = content.trim().split(/\s+/).length;
-  return Math.max(1, Math.round(words / 200));
+  return Math.max(1, Math.round(wordCount(content) / 200));
+}
+
+/** Sort notes newest-first, excluding drafts in production */
+export function sortedNotes(
+  notes: CollectionEntry<"notes">[],
+  includeDrafts = false,
+): CollectionEntry<"notes">[] {
+  return notes
+    .filter((n) => includeDrafts || !n.data.draft)
+    .sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
 }
 
 /** Sort posts newest-first, excluding drafts in production */
