@@ -31,7 +31,7 @@ This post walks the request path from identity to audit log, then covers each co
 
 ## The request path, end to end
 
-When a user issues `SELECT * FROM project.dataset.table`, this is what fires:
+Every BigQuery access control fires somewhere on the request path between identity resolution and audit emission. Understanding this path is the prerequisite for evaluating any individual control — if a mechanism is not on this path, it does not protect the query at runtime. When a user issues `SELECT * FROM project.dataset.table`, this is what fires:
 
 1. **Identity resolves.** Google Workspace or a federated IdP (Okta, Azure AD, etc.) issues an OAuth token. The principal is a user, group, or service account.
 2. **IAM check at project → dataset → table.** The Resource Manager evaluates whether the principal holds a role with `bigquery.tables.getData` (or equivalent) at the right level. Denied? Query fails with a 403 before touching data.
@@ -40,11 +40,11 @@ When a user issues `SELECT * FROM project.dataset.table`, this is what fires:
 5. **Results return.** The masked, filtered result set is delivered to the client.
 6. **Cloud Audit Log written.** An entry lands in the Data Access log (if enabled) recording who queried what, when, from which IP, and the job metadata.
 
-If a control is not on this path, it does not protect the query. VPC Service Controls protect the *perimeter* (step 0, before the query reaches the service). KMS protects data *at rest* (below step 3). But the access decision itself lives in steps 2–4 [1][2].
+If a control is not on this path, it does not protect the query. VPC Service Controls protect the *perimeter* (step 0, before the query reaches the service). KMS protects data *at rest* (below step 3). But the access decision itself lives in steps 2–4 (see [BigQuery access controls](https://cloud.google.com/bigquery/docs/access-control-intro) and [data governance overview](https://cloud.google.com/bigquery/docs/data-governance)).
 
 ## 1. IAM hierarchy and least privilege
 
-BigQuery IAM operates at five levels of granularity: organization, folder, project, dataset, and table/view/routine. Permissions granted at a higher level inherit downward.
+BigQuery IAM is the coarse access control layer that determines whether a principal can reach an object at all. It operates at five levels of granularity — organization, folder, project, dataset, and table/view/routine — with permissions inheriting downward. Most governance failures start here, with over-broad grants at the project level that make fine-grained controls downstream irrelevant.
 
 **The natural unit is the dataset.** Most teams over-grant at the project level (`roles/bigquery.dataViewer` on the project gives read access to every dataset in it). The first governance win is moving grants down to dataset level and using IAM Conditions to scope time-bound or attribute-based access.
 
@@ -52,7 +52,7 @@ BigQuery IAM operates at five levels of granularity: organization, folder, proje
 
 **Service account sprawl.** Scheduled queries, Dataform, Dataflow pipelines, Cloud Composer DAGs, and Vertex AI training jobs all use service accounts. Each one holds IAM bindings that accumulate over time. The audit question: can you list every service account with data access, and for each, show the last time it actually used that access?
 
-**IAM Conditions.** Conditions let you scope grants by time, resource name, or request attribute. Example: grant `dataViewer` only on datasets whose name starts with `analytics_` and only during business hours. Conditions are the closest BigQuery gets to ABAC without policy tags [10].
+**IAM Conditions.** Conditions let you scope grants by time, resource name, or request attribute. Example: grant `dataViewer` only on datasets whose name starts with `analytics_` and only during business hours. Conditions are the closest BigQuery gets to ABAC without policy tags (see [IAM resource-level access](https://cloud.google.com/bigquery/docs/control-access-to-resources-iam)).
 
 ## 2. Policy tags: BigQuery's classification primitive
 
@@ -63,7 +63,7 @@ Policy tags are the most important governance primitive BigQuery offers. They li
 
 **The taxonomy is the real governance work.** Designing the tag hierarchy — `PII > email`, `PII > SSN`, `Financial > revenue`, `Internal > draft` — determines what policies you can express. A flat taxonomy forces one-off grants. A well-structured tree lets you grant at an interior node and cover all children.
 
-**Anti-pattern: tagging at table creation time.** If policy tags are applied manually when someone creates a table, they drift the moment a new column is added or a pipeline recreates the table. Tags should originate from a classification scan (Sensitive Data Protection) or from CI (Terraform applying tags on every deploy). Manual tagging is folklore — you cannot prove it is current [3][4].
+**Anti-pattern: tagging at table creation time.** If policy tags are applied manually when someone creates a table, they drift the moment a new column is added or a pipeline recreates the table. Tags should originate from a classification scan (Sensitive Data Protection) or from CI (Terraform applying tags on every deploy). Manual tagging is folklore — you cannot prove it is current (see [column-level security intro](https://cloud.google.com/bigquery/docs/column-level-security-intro) and [implementation guide](https://cloud.google.com/bigquery/docs/column-level-security)).
 
 ## 3. Dynamic data masking
 
@@ -86,11 +86,11 @@ Dynamic data masking attaches a masking rule to a policy tag. When a principal q
 - **Masked Reader on the tag (or a parent tag):** The principal sees the masked value.
 - **Neither:** The query fails.
 
-The edge case that bites real orgs: if a principal holds Fine-Grained Reader on a *parent* tag and Masked Reader on a *child* tag, the more permissive grant wins and they see raw data. Role resolution follows the tag hierarchy, not the column. Design your taxonomy and role bindings together — granting Fine-Grained Reader at the top of the tree to "admins" means no masking applies to them anywhere in the tree, even if Masked Reader is granted more narrowly [5].
+The edge case that bites real orgs: if a principal holds Fine-Grained Reader on a *parent* tag and Masked Reader on a *child* tag, the more permissive grant wins and they see raw data. Role resolution follows the tag hierarchy, not the column. Design your taxonomy and role bindings together — granting Fine-Grained Reader at the top of the tree to "admins" means no masking applies to them anywhere in the tree, even if Masked Reader is granted more narrowly (see [dynamic data masking](https://cloud.google.com/bigquery/docs/column-data-masking-intro)).
 
 ## 4. Row-level security
 
-Row access policies are SQL predicates attached to a table with a grantee list. When a query runs, the engine injects the predicate as a planner-level filter — rows that do not satisfy the policy are excluded from the scan, not filtered after the fact.
+Row-level security (RLS) in BigQuery controls which rows a principal can see within a table by attaching SQL predicates with grantee lists. Row access policies are evaluated at query time as planner-level filters — rows that do not satisfy the policy for the calling principal are excluded before results are assembled, making RLS invisible to the caller except through the absence of rows they cannot access.
 
 ```sql
 CREATE ROW ACCESS POLICY region_filter
@@ -103,7 +103,7 @@ FILTER USING (region = 'EMEA');
 
 **Performance.** Row access policies are evaluated at query time as injected predicates. BigQuery handles the filtering, but do not assume the predicate participates in partition pruning or clustering benefits — it does not. A row policy on a partitioned table still requires the engine to evaluate the predicate against scanned rows within the accessed partitions. For large tables, design your row policies with this in mind: a policy that references a non-clustered column on a multi-terabyte table will scan more data than you might expect from the IAM-only path.
 
-**Anti-pattern: RLS via authorized views.** Before row access policies existed (GA 2022), teams built authorized views with `SESSION_USER()` predicates. These still work but carry maintenance overhead — every new table needs a new view, and you cannot centrally audit which predicates apply where. Row policies are the right tool unless your access logic requires complex joins or business logic that only a view can express [6].
+**Anti-pattern: RLS via authorized views.** Before row access policies existed (GA 2022), teams built authorized views with `SESSION_USER()` predicates. These still work but carry maintenance overhead — every new table needs a new view, and you cannot centrally audit which predicates apply where. Row policies are the right tool unless your access logic requires complex joins or business logic that only a view can express (see [row-level security intro](https://cloud.google.com/bigquery/docs/row-level-security-intro)).
 
 ## 5. Authorized views, datasets, and routines
 
@@ -118,11 +118,11 @@ The authorized pattern is BigQuery's "share a query, not a table" primitive. An 
 - **Authorized views/routines:** When the access logic requires joins, aggregations, or transformations that cannot be expressed as a simple predicate or mask.
 - **RLS + CLS:** When the table structure is the correct interface and you just need to restrict which rows or columns a principal sees.
 
-Mixing both is common. A governed analytics dataset might contain authorized views that read from RLS-protected tables with CLS-masked columns [7][8][9].
+Mixing both is common. A governed analytics dataset might contain authorized views that read from RLS-protected tables with CLS-masked columns (see [authorized views](https://cloud.google.com/bigquery/docs/authorized-views), [authorized datasets](https://cloud.google.com/bigquery/docs/authorized-datasets), [authorized routines](https://cloud.google.com/bigquery/docs/authorized-routines)).
 
 ## 6. VPC Service Controls
 
-VPC Service Controls (VPC-SC) are orthogonal to IAM. IAM answers "does this principal have permission?" VPC-SC answers "is this request coming from an allowed network context?" A principal can hold `dataViewer` and still be blocked if their request originates outside the perimeter.
+VPC Service Controls (VPC-SC) are the network-perimeter layer that operates orthogonally to IAM. While IAM answers "does this principal have permission?", VPC-SC answers "is this request coming from an allowed network context?" — and a principal can hold valid credentials yet still be denied if the request originates outside the perimeter. This makes VPC-SC the primary defense against credential theft and data exfiltration.
 
 **The exfiltration scenario VPC-SC stops:** An attacker obtains service account credentials (leaked in a log, stolen from a CI runner). Without VPC-SC, they can use those credentials from any IP to copy tables to their own project. With VPC-SC, the request is denied because it originates outside your perimeter — even though the credentials are valid.
 
@@ -133,11 +133,11 @@ VPC Service Controls (VPC-SC) are orthogonal to IAM. IAM answers "does this prin
 - **Egress rules:** Allow data to leave the perimeter to specific destinations.
 - **Access levels:** Context-aware conditions (corporate network, managed device, geo) that gate ingress.
 
-**Operational reality.** VPC-SC is the single most operationally painful control in GCP. The violations are noisy until your access levels match the reality of where your users and service accounts actually operate. Plan for a "dry-run" period — VPC-SC supports a dry-run mode that logs would-be violations without blocking them. Run dry-run for weeks before enforcing [11].
+**Operational reality.** VPC-SC is the single most operationally painful control in GCP. The violations are noisy until your access levels match the reality of where your users and service accounts actually operate. Plan for a "dry-run" period — VPC-SC supports a dry-run mode that logs would-be violations without blocking them. Run dry-run for weeks before enforcing (see [VPC-SC for BigQuery](https://cloud.google.com/bigquery/docs/vpc-sc)).
 
 ## 7. CMEK, Cloud EKM, and column-level AEAD
 
-BigQuery encrypts all data at rest by default with Google-managed keys. Three opt-in layers give you progressively more key custody:
+BigQuery encrypts all data at rest by default using Google-managed keys, but three opt-in layers give you progressively more key custody — from controlling the key policy, to holding the key material externally, to encrypting individual column values with application-layer AEAD. Each layer adds auditability (via Cloud KMS logs) and a kill-switch capability at the cost of operational complexity and latency.
 
 **1. CMEK (Customer-Managed Encryption Keys).** You create a key in Cloud KMS. BigQuery uses it to encrypt your datasets. Google holds the HSM; you hold the IAM policy that governs who can use the key. You can disable or destroy the key to render data unreadable — a hard kill switch.
 
@@ -145,11 +145,11 @@ BigQuery encrypts all data at rest by default with Google-managed keys. Three op
 
 **3. Column-level AEAD encryption.** Selective encryption of individual column values using `AEAD.ENCRYPT` / `AEAD.DECRYPT` SQL functions with a KMS-managed key. The ciphertext is stored in the column; only callers who hold `cloudkms.cryptoKeyVersions.useToDecrypt` on the referenced key can read the plaintext. This is application-layer encryption inside the warehouse.
 
-**The auditor's question:** Who can use the key? Who can rotate it? What triggers rotation? The answers live in Cloud KMS audit logs — a second evidence trail alongside BigQuery's own audit logs. If you use CMEK or EKM, your compliance story now spans two log sources [12][13][14].
+**The auditor's question:** Who can use the key? Who can rotate it? What triggers rotation? The answers live in Cloud KMS audit logs — a second evidence trail alongside BigQuery's own audit logs. If you use CMEK or EKM, your compliance story now spans two log sources (see [CMEK for BigQuery](https://cloud.google.com/bigquery/docs/customer-managed-encryption), [encryption at rest](https://cloud.google.com/bigquery/docs/encryption-at-rest), [column AEAD](https://cloud.google.com/bigquery/docs/column-key-encrypt)).
 
 ## 8. Sensitive Data Protection (Cloud DLP)
 
-BigQuery does not have a native classification engine. Sensitive Data Protection (SDP, formerly Cloud DLP) fills this gap as a separate service.
+BigQuery does not have a native classification engine — it cannot automatically detect which columns contain PII, financial data, or health records. Sensitive Data Protection (SDP, formerly Cloud DLP) fills this gap as a separate GCP service that inspects, profiles, and de-identifies data. Because policy tags only protect what they cover, SDP is the detection loop that keeps classification current as schemas evolve.
 
 **The workflow:**
 
@@ -160,11 +160,11 @@ BigQuery does not have a native classification engine. Sensitive Data Protection
 
 **Why this matters for governance.** Policy tags are only as good as their coverage. If a new column with PII appears in a table and nobody tags it, the policy does not fire. SDP is the detection loop that closes this gap — but you have to wire it. The scan → tag pipeline is not built-in; it is your automation to maintain.
 
-**Anti-pattern: relying on manual classification.** If your policy tags are applied by a human at table creation time and never re-scanned, classification drifts. The correct pattern is: SDP scan detects → findings trigger a Cloud Function or Workflows pipeline → pipeline calls the Data Catalog API to apply or update tags → policy fires on next query [15].
+**Anti-pattern: relying on manual classification.** If your policy tags are applied by a human at table creation time and never re-scanned, classification drifts. The correct pattern is: SDP scan detects → findings trigger a Cloud Function or Workflows pipeline → pipeline calls the Data Catalog API to apply or update tags → policy fires on next query (see [SDP scanning for BigQuery](https://cloud.google.com/bigquery/docs/scan-with-dlp)).
 
 ## 9. The Knowledge Catalog
 
-Google has renamed its catalog surface multiple times — Data Catalog, Dataplex Universal Catalog, and now Knowledge Catalog. The names change; the underlying ownership boundary matters more than the branding.
+Google has renamed its catalog surface multiple times — Data Catalog, Dataplex Universal Catalog, and now Knowledge Catalog. The naming is confusing, but the ownership boundary that matters for data protection is straightforward: policy tags (the access control primitive) are BigQuery-native and managed via the Data Catalog API, while Knowledge Catalog is the broader metadata layer for lineage, discovery, and cross-service governance.
 
 **What lives where:**
 
@@ -180,11 +180,11 @@ The distinction matters for protection: you do *not* need to adopt Knowledge Cat
 - Data quality validation results
 - Cross-service catalog entries
 
-**The lineage gap.** Lineage capture is automatic for BigQuery SQL jobs. It is partial or absent for Dataflow, Dataproc, BQML training jobs, and custom pipelines writing to Cloud Storage. If an auditor asks "where did this derived column originate?" and the path crosses a non-SQL engine, the lineage edge may not exist in the catalog [16][17][18].
+**The lineage gap.** Lineage capture is automatic for BigQuery SQL jobs. It is partial or absent for Dataflow, Dataproc, BQML training jobs, and custom pipelines writing to Cloud Storage. If an auditor asks "where did this derived column originate?" and the path crosses a non-SQL engine, the lineage edge may not exist in the catalog (see [Knowledge Catalog with BigQuery](https://cloud.google.com/bigquery/docs/use-knowledge-catalog), [catalog transition guide](https://cloud.google.com/dataplex/docs/transition-to-dataplex-catalog), and [unified governance blog](https://cloud.google.com/blog/products/data-analytics/manage-and-govern-data-with-the-unified-dataplex-and-data-catalog)).
 
 ## 10. Cloud Audit Logs: your evidence pack
 
-BigQuery writes to three Cloud Audit Log streams:
+Cloud Audit Logs are the evidence layer that makes every other control in this post defensible. Without audit logs, you can configure IAM, policy tags, and VPC-SC perfectly and still fail an audit because you cannot prove the controls fired on a specific query at a specific time. BigQuery writes to three log streams, each with different default behavior and cost implications.
 
 - **Admin Activity** (always on, free): WHO created/deleted/modified datasets, tables, and policies.
 - **Data Access** (enabled by default for BigQuery, costs apply): WHO queried WHICH tables, with job metadata. Unlike most GCP services where Data Access logs are off by default, BigQuery enables `DATA_READ` and `DATA_WRITE` audit logs automatically. However, the scope and detail vary — `ADMIN_READ` (listing datasets, getting table metadata) is still off by default and must be enabled separately.
@@ -194,7 +194,7 @@ BigQuery writes to three Cloud Audit Log streams:
 
 **Tamper resistance.** Audit logs should be sunk to a separate project that the production project's principals cannot write to. The pattern: create a logging project, create a log sink in the production project that routes to the logging project, grant `logging.logWriter` only to the sink's service account. Now even a compromised admin in the production project cannot delete the evidence.
 
-**What the log contains — and what it does not.** The audit log entry records: project, dataset, table, job ID, caller identity, caller IP, timestamp, and bytes processed. The `authorizationInfo` field shows which IAM permissions were checked and whether row access policy names were evaluated. However, the log does *not* include: the actual row filter expression that was applied, the grantee list of the policy, or a direct link between policy-tag checks and the triggering query. This means you can prove *that* access controls fired, but reconstructing *exactly what a user saw* requires correlating the audit log with the current policy definitions — the log alone is not a complete evidence pack [19].
+**What the log contains — and what it does not.** The audit log entry records: project, dataset, table, job ID, caller identity, caller IP, timestamp, and bytes processed. The `authorizationInfo` field shows which IAM permissions were checked and whether row access policy names were evaluated. However, the log does *not* include: the actual row filter expression that was applied, the grantee list of the policy, or a direct link between policy-tag checks and the triggering query. This means you can prove *that* access controls fired, but reconstructing *exactly what a user saw* requires correlating the audit log with the current policy definitions — the log alone is not a complete evidence pack (see [BigQuery audit logs reference](https://cloud.google.com/bigquery/docs/reference/auditlogs)).
 
 ## What BigQuery does well
 
@@ -216,23 +216,25 @@ BigQuery writes to three Cloud Audit Log streams:
 
 ## Sources
 
-1. BigQuery security & access controls — <https://cloud.google.com/bigquery/docs/access-control-intro>
-2. BigQuery data governance overview — <https://cloud.google.com/bigquery/docs/data-governance>
-3. Column-level access control / policy tags — <https://cloud.google.com/bigquery/docs/column-level-security-intro>
-4. Restrict columns (implementation) — <https://cloud.google.com/bigquery/docs/column-level-security>
-5. Dynamic data masking — <https://cloud.google.com/bigquery/docs/column-data-masking-intro>
-6. Row-level security — <https://cloud.google.com/bigquery/docs/row-level-security-intro>
-7. Authorized views — <https://cloud.google.com/bigquery/docs/authorized-views>
-8. Authorized datasets — <https://cloud.google.com/bigquery/docs/authorized-datasets>
-9. Authorized routines — <https://cloud.google.com/bigquery/docs/authorized-routines>
-10. IAM at dataset / table / view / routine granularity — <https://cloud.google.com/bigquery/docs/control-access-to-resources-iam>
-11. VPC Service Controls perimeter for BigQuery — <https://cloud.google.com/bigquery/docs/vpc-sc>
-12. CMEK for BigQuery — <https://cloud.google.com/bigquery/docs/customer-managed-encryption>
-13. Encryption at rest (default + KMS) — <https://cloud.google.com/bigquery/docs/encryption-at-rest>
-14. Column AEAD encryption with KMS — <https://cloud.google.com/bigquery/docs/column-key-encrypt>
-15. Sensitive Data Protection scanning of BigQuery — <https://cloud.google.com/bigquery/docs/scan-with-dlp>
-16. Knowledge Catalog with BigQuery — <https://cloud.google.com/bigquery/docs/use-knowledge-catalog>
-17. Data Catalog → Knowledge Catalog transition — <https://cloud.google.com/dataplex/docs/transition-to-dataplex-catalog>
-18. Unified Dataplex + Data Catalog governance (Cloud Blog) — <https://cloud.google.com/blog/products/data-analytics/manage-and-govern-data-with-the-unified-dataplex-and-data-catalog>
-19. BigQuery audit logs reference — <https://cloud.google.com/bigquery/docs/reference/auditlogs>
-20. Trusting your data on Google Cloud (whitepaper) — <https://cloud.google.com/security/compliance/trusting_data_gcp_whitepaper>
+All sources are linked inline throughout the post. Consolidated here for reference:
+
+- [BigQuery security & access controls](https://cloud.google.com/bigquery/docs/access-control-intro)
+- [BigQuery data governance overview](https://cloud.google.com/bigquery/docs/data-governance)
+- [Column-level access control / policy tags](https://cloud.google.com/bigquery/docs/column-level-security-intro)
+- [Restrict columns (implementation)](https://cloud.google.com/bigquery/docs/column-level-security)
+- [Dynamic data masking](https://cloud.google.com/bigquery/docs/column-data-masking-intro)
+- [Row-level security](https://cloud.google.com/bigquery/docs/row-level-security-intro)
+- [Authorized views](https://cloud.google.com/bigquery/docs/authorized-views)
+- [Authorized datasets](https://cloud.google.com/bigquery/docs/authorized-datasets)
+- [Authorized routines](https://cloud.google.com/bigquery/docs/authorized-routines)
+- [IAM at dataset / table / view / routine granularity](https://cloud.google.com/bigquery/docs/control-access-to-resources-iam)
+- [VPC Service Controls perimeter for BigQuery](https://cloud.google.com/bigquery/docs/vpc-sc)
+- [CMEK for BigQuery](https://cloud.google.com/bigquery/docs/customer-managed-encryption)
+- [Encryption at rest (default + KMS)](https://cloud.google.com/bigquery/docs/encryption-at-rest)
+- [Column AEAD encryption with KMS](https://cloud.google.com/bigquery/docs/column-key-encrypt)
+- [Sensitive Data Protection scanning of BigQuery](https://cloud.google.com/bigquery/docs/scan-with-dlp)
+- [Knowledge Catalog with BigQuery](https://cloud.google.com/bigquery/docs/use-knowledge-catalog)
+- [Data Catalog → Knowledge Catalog transition](https://cloud.google.com/dataplex/docs/transition-to-dataplex-catalog)
+- [Unified Dataplex + Data Catalog governance (Cloud Blog)](https://cloud.google.com/blog/products/data-analytics/manage-and-govern-data-with-the-unified-dataplex-and-data-catalog)
+- [BigQuery audit logs reference](https://cloud.google.com/bigquery/docs/reference/auditlogs)
+- [Trusting your data on Google Cloud (whitepaper)](https://cloud.google.com/security/compliance/trusting_data_gcp_whitepaper)
