@@ -1,9 +1,21 @@
 ---
 title: "Data Protection in BigQuery: A Field Guide"
 description: "How BigQuery layers IAM, policy tags, dynamic masking, RLS, authorized views, VPC Service Controls, CMEK/EKM, and the Knowledge Catalog into a defensible data protection posture — and what it leaves to you."
+tldr: "BigQuery's data protection model lives in IAM, policy tags, and the query engine — not cluster configs. This post walks each control surface from identity to audit log and identifies where the platform's evidence trail has gaps."
 date: 2026-05-13
 tags: ["bigquery", "gcp", "security", "governance", "data"]
 draft: true
+faq:
+  - q: "Are BigQuery Data Access audit logs enabled by default?"
+    a: "Yes, unlike most GCP services. BigQuery enables DATA_READ and DATA_WRITE audit logs by default. However, ADMIN_READ (metadata operations like listing datasets) is still off by default and must be enabled separately."
+  - q: "Do BigQuery row access policies benefit from partition pruning?"
+    a: "No. Row access policies are evaluated as predicates at query time but do not participate in partition pruning or clustering optimizations. Design policies with scan cost in mind on large tables."
+  - q: "What is the difference between column-level security and dynamic masking in BigQuery?"
+    a: "Both attach to policy tags. Column-level security blocks access entirely if the principal lacks Fine-Grained Reader. Dynamic masking returns a substituted value if the principal holds Masked Reader. The role hierarchy determines which applies."
+  - q: "Do you need Knowledge Catalog to use BigQuery policy tags?"
+    a: "No. Policy tags for column-level security and masking are managed through the BigQuery and Data Catalog APIs. Knowledge Catalog provides broader metadata, lineage, and discovery capabilities but is not required for access control."
+  - q: "What does BigQuery's audit log NOT record about access controls?"
+    a: "The audit log records that row access policies and policy-tag checks were evaluated, but omits the actual filter expressions, grantee lists, and direct links between policy-tag checks and the triggering query columns."
 ---
 
 > Part of the overview: [How Modern Data Platforms Protect Data](/posts/2026/05/13/how-modern-data-platforms-protect-data/).
@@ -68,7 +80,13 @@ Dynamic data masking attaches a masking rule to a policy tag. When a principal q
 
 **Custom masking via authorized routines.** When built-in routines are not enough, you write a UDF and register it as the masking routine for a policy tag. The UDF runs with the elevated privileges of its owning dataset (an authorized routine), so it can apply business logic the caller cannot see or bypass.
 
-**The composition model.** A single column can wear one policy tag. That tag can enforce either CLS (block) or masking (rewrite), not both simultaneously on the same principal. The decision tree: if a principal has Fine-Grained Reader, they see the raw value. If they have Masked Reader, they see the masked value. If they have neither, the query fails [5].
+**The composition model.** A single column can wear one policy tag. That tag can enforce either CLS (block) or masking (rewrite), but the outcome for a specific principal depends on which roles they hold and where those roles are granted in the policy-tag hierarchy:
+
+- **Fine-Grained Reader on the tag (or a parent tag):** The principal sees the raw value.
+- **Masked Reader on the tag (or a parent tag):** The principal sees the masked value.
+- **Neither:** The query fails.
+
+The edge case that bites real orgs: if a principal holds Fine-Grained Reader on a *parent* tag and Masked Reader on a *child* tag, the more permissive grant wins and they see raw data. Role resolution follows the tag hierarchy, not the column. Design your taxonomy and role bindings together — granting Fine-Grained Reader at the top of the tree to "admins" means no masking applies to them anywhere in the tree, even if Masked Reader is granted more narrowly [5].
 
 ## 4. Row-level security
 
@@ -83,7 +101,7 @@ FILTER USING (region = 'EMEA');
 
 **Composition with CLS.** A principal can be simultaneously filtered by row policies and masked on columns. The two mechanisms are orthogonal — row policies decide *which* rows, column policies decide *what* they see in those rows.
 
-**Performance.** Because the filter is injected at plan time, BigQuery can push it into the storage layer. There is no hidden full-table scan followed by a discard. On partitioned/clustered tables, the row policy predicate composes with partition pruning.
+**Performance.** Row access policies are evaluated at query time as injected predicates. BigQuery handles the filtering, but do not assume the predicate participates in partition pruning or clustering benefits — it does not. A row policy on a partitioned table still requires the engine to evaluate the predicate against scanned rows within the accessed partitions. For large tables, design your row policies with this in mind: a policy that references a non-clustered column on a multi-terabyte table will scan more data than you might expect from the IAM-only path.
 
 **Anti-pattern: RLS via authorized views.** Before row access policies existed (GA 2022), teams built authorized views with `SESSION_USER()` predicates. These still work but carry maintenance overhead — every new table needs a new view, and you cannot centrally audit which predicates apply where. Row policies are the right tool unless your access logic requires complex joins or business logic that only a view can express [6].
 
@@ -146,32 +164,37 @@ BigQuery does not have a native classification engine. Sensitive Data Protection
 
 ## 9. The Knowledge Catalog
 
-Google has renamed this surface twice: Data Catalog → Dataplex Universal Catalog → Knowledge Catalog (current as of early 2026; verify at publish time). The underlying primitive is the same: a centralized metadata store that holds:
+Google has renamed its catalog surface multiple times — Data Catalog, Dataplex Universal Catalog, and now Knowledge Catalog. The names change; the underlying ownership boundary matters more than the branding.
 
-- **Policy tag taxonomies** — the classification trees that CLS and masking reference.
-- **Business glossary** — human-readable definitions of data assets.
-- **Lineage** — table and column lineage captured from BigQuery jobs.
-- **Data quality rules** — validation checks attached to tables.
+**What lives where:**
 
-**What it does for protection:** The Knowledge Catalog is where the policy tag taxonomy lives. Without it, you cannot create policy tags, which means no CLS and no masking. It is the control-plane backing store.
+- **Policy tags for column-level security and masking** are managed through the BigQuery and Data Catalog APIs. This is not deprecated and does not require the Knowledge Catalog. Policy tags are a BigQuery-native primitive that predates the catalog unification effort.
+- **Knowledge Catalog** is the broader metadata layer: business glossary, data quality rules, lineage visualization, discovery, and cross-service catalog entries (AlloyDB, Cloud Storage, Vertex AI).
 
-**The unification story.** Google's pitch is one catalog that BigQuery, AlloyDB, Spanner, Cloud Storage, and Vertex AI all read from. In practice, lineage coverage is uneven. BigQuery SQL jobs produce lineage automatically. Dataflow, Dataproc, and BQML training jobs have partial or no lineage capture. If an auditor asks "where did this column's data originate?" and the answer crosses a Dataflow pipeline, you may not have the lineage edge.
+The distinction matters for protection: you do *not* need to adopt Knowledge Catalog to use policy tags, CLS, or masking. You need it if you want centralized lineage, cross-service discovery, or business-glossary-driven governance.
 
-**The auditor question:** Show me the lineage for this derived table back to its source. If the path crosses a non-SQL engine (Dataflow, Spark on Dataproc, a custom Python pipeline), expect a gap [16][17][18].
+**What Knowledge Catalog holds for protection:**
+
+- Business glossary and semantic definitions
+- Table and column lineage captured from BigQuery SQL jobs
+- Data quality validation results
+- Cross-service catalog entries
+
+**The lineage gap.** Lineage capture is automatic for BigQuery SQL jobs. It is partial or absent for Dataflow, Dataproc, BQML training jobs, and custom pipelines writing to Cloud Storage. If an auditor asks "where did this derived column originate?" and the path crosses a non-SQL engine, the lineage edge may not exist in the catalog [16][17][18].
 
 ## 10. Cloud Audit Logs: your evidence pack
 
 BigQuery writes to three Cloud Audit Log streams:
 
 - **Admin Activity** (always on, free): WHO created/deleted/modified datasets, tables, and policies.
-- **Data Access** (off by default, costs apply): WHO queried WHICH tables, with job metadata.
+- **Data Access** (enabled by default for BigQuery, costs apply): WHO queried WHICH tables, with job metadata. Unlike most GCP services where Data Access logs are off by default, BigQuery enables `DATA_READ` and `DATA_WRITE` audit logs automatically. However, the scope and detail vary — `ADMIN_READ` (listing datasets, getting table metadata) is still off by default and must be enabled separately.
 - **System Event** (always on, free): system-level operations like BigQuery Storage API reads.
 
-**The critical gap: Data Access logs are off by default.** Without them, you cannot prove who read what table, let alone which columns were returned. An auditor will ask for evidence that a specific principal accessed a specific table on a specific date. If Data Access logs are not enabled, you cannot answer. Turn them on for every project that holds governed data.
+**Verify your configuration.** Because BigQuery's default-on behavior differs from other GCP services, teams often assume full coverage without checking. The specific gap: `ADMIN_READ` logs (who listed which datasets, who called `getTable`) are not enabled by default. If your compliance requirement includes proving who *discovered* what data exists — not just who queried it — you need to enable `ADMIN_READ` explicitly.
 
 **Tamper resistance.** Audit logs should be sunk to a separate project that the production project's principals cannot write to. The pattern: create a logging project, create a log sink in the production project that routes to the logging project, grant `logging.logWriter` only to the sink's service account. Now even a compromised admin in the production project cannot delete the evidence.
 
-**What the log contains:** Project, dataset, table, columns accessed, job ID, caller identity, caller IP, timestamp, bytes scanned, and whether row/column policies were evaluated. This is your evidence pack for any access dispute [19].
+**What the log contains — and what it does not.** The audit log entry records: project, dataset, table, job ID, caller identity, caller IP, timestamp, and bytes processed. The `authorizationInfo` field shows which IAM permissions were checked and whether row access policy names were evaluated. However, the log does *not* include: the actual row filter expression that was applied, the grantee list of the policy, or a direct link between policy-tag checks and the triggering query. This means you can prove *that* access controls fired, but reconstructing *exactly what a user saw* requires correlating the audit log with the current policy definitions — the log alone is not a complete evidence pack [19].
 
 ## What BigQuery does well
 
