@@ -1,9 +1,23 @@
 ---
 title: "AI Coding Interview Rubrics"
 description: "What separates a competent AI-assisted engineer from someone who just autocompletes? A framework for evaluating the skills that actually matter."
+tldr: "An 8-part rubric for evaluating engineers who use AI coding tools — model selection, mode selection, context management, environment setup, custom tooling, personalized agent system, spec → test → development flow, and feedback loops. The point: judgment over prompting."
 date: 2026-05-07
 tags: ["ai", "career", "engineering"]
 draft: false
+faq:
+  - q: "What is an AI coding interview?"
+    a: "An interview that evaluates whether a candidate can ship real software using AI coding tools — not whether they can autocomplete or write clever prompts. The skill being measured is engineering judgment applied to a new class of tool."
+  - q: "What separates a strong AI-assisted engineer from a weak one?"
+    a: "Five behaviors: choosing the right model for the subtask, choosing the right mode (ask, plan, agent), preparing context before prompting, defining success criteria before generating code, and iterating quickly when output is wrong."
+  - q: "What is the spec → test → development workflow?"
+    a: "A three-phase loop: write the spec (requirements, edge cases, acceptance criteria), generate tests from the spec, then make the tests pass. The benefit is that the model has a binary self-evaluation target instead of a vague 'write me a function' prompt."
+  - q: "Why does model selection matter?"
+    a: "Wrong model choice either wastes money (a large model on a trivial transform) or wastes time recovering from bad output (a small model on a task that needs deep reasoning). Knowing the cost/capability tradeoff for the model family you use is a daily decision, not an occasional one."
+  - q: "What is a 'personalized agent system'?"
+    a: "The accumulated layer of instructions, skills, and conventions outside the codebase that makes an agent follow your habits — architectural taste, review standards, CI expectations. Two engineers with the same model and the same repo get different output based on this layer."
+  - q: "What should an AI coding interview actually evaluate?"
+    a: "Four traits: judgment over speed (right tool for the subtask), preparation over prompting (context set up before typing), verification over trust (success criteria defined before generating code), and iteration over perfection (course-correct fast on bad output)."
 ---
 
 AI coding interviews are emerging. Companies want to know: can this person actually ship with AI, or do they just tab-complete and pray?

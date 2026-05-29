@@ -1,9 +1,21 @@
 ---
 title: "How Modern Data Platforms Protect Data"
 description: "A short, practical overview of how BigQuery, Databricks, Immuta, and Lake Formation protect data in practice — and where teams usually get exposed."
+tldr: "A shared evaluation lens for data protection across BigQuery, Databricks Unity Catalog, policy overlays (Immuta, Privacera, OneTrust, Lake Formation), and the dbt + Terraform layer. Six properties to defend, one query-path model, ten control areas, and the auditor question at every step: show me the log line."
 date: 2026-05-13
 tags: ["data", "security", "governance", "bigquery", "databricks", "immuta"]
 draft: false
+faq:
+  - q: "What does 'data protection' mean for a cloud data warehouse?"
+    a: "The ability to defend six properties in front of an auditor: confidentiality, integrity, availability, privacy, auditability, and lineage/residency. Each maps to a specific failure an auditor will write up — for example, a DSAR that cannot be answered, or a query whose access decision cannot be reconstructed from logs."
+  - q: "What is the end-to-end request path on a modern data platform?"
+    a: "Six stages: identity resolves via the IdP, coarse authorization via IAM, fine-grained authorization via row/column/tag policies, transformation via masking and tokenization, egress controls via perimeter and sharing rules, and audit emission to an immutable sink. Every control either fires somewhere on this path or it does not exist."
+  - q: "What are the ten control areas to evaluate?"
+    a: "Identity and coarse access, fine-grained access, masking and tokenization, classification and tagging, lineage, audit and observability, encryption and key custody, network isolation, data sharing, and residency. Each is checked not by 'does the UI exist?' but by 'how do you prove it fired?'"
+  - q: "Where do auditors most often find gaps in data platforms?"
+    a: "Service-account sprawl around scheduled queries and orchestration, lineage gaps for derived and ML feature tables, inconsistent classification between native catalog and policy overlay, policy-as-code that disagrees with live state because someone clicked in the console, key rotation evidence that cannot be produced quickly, DSAR and right-to-be-forgotten on Iceberg and Delta, and external sharing without a traceable DPA on the same principal."
+  - q: "Where does each major platform lean hardest?"
+    a: "BigQuery is strongest at IAM, VPC Service Controls, and the KMS story; weakest at classification automation and derived-path lineage. Databricks Unity Catalog is strongest at namespace and grants, ABAC, lineage, and audit-as-SQL; weakest at multi-region and non-UC compute paths. Immuta is strongest at heterogeneous estates and advanced masking; weakest at IaC ergonomics. Lake Formation is strongest at AWS-native consistency; weakest at multi-cloud, by design."
 ---
 
 Every cloud data warehouse says it has strong governance. The useful question is simpler: when a query runs, what control fires, and what proof do you have?

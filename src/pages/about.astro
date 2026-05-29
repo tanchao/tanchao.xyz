@@ -70,12 +70,49 @@ const personSchema = {
   description:
     "Data governance and privacy engineer with 18 years of experience building and securing large-scale data systems. Built Snowflake's data classification platform. Former Amazon Alexa tech lead. Expert in data governance, AI system security, and performance engineering.",
 };
+
+const faq = [
+  {
+    q: "Who is Chao Tan?",
+    a: "Chao Tan is a data governance and privacy engineer at Snowflake. He built Snowflake's data classification platform, which automatically discovers and tags sensitive data across customer accounts. Before Snowflake, he was a tech lead on Amazon Alexa's cloud platform services.",
+  },
+  {
+    q: "Where does Chao Tan work?",
+    a: "Snowflake, based in Bellevue, Washington. He builds the data classification platform that underlies sensitive-data discovery and tag-driven access policies across Snowflake's cloud.",
+  },
+  {
+    q: "What did Chao Tan do at Amazon?",
+    a: "Six years at Amazon, primarily as a tech lead on Alexa's cloud platform services. He owned APIs serving hundreds of millions of requests, led a 14-person engineering team through a major infrastructure decoupling that impacted 10,000+ internal developers, and built the backend for Amazon's consumer robot (Astro) from scratch.",
+  },
+  {
+    q: "What patents has Chao Tan filed?",
+    a: "Three pending patent applications at Snowflake: Efficient Computation over a Wide Table (US20260003847A1, filed June 2024), Automatic Tag Propagation (US20250371036A1, filed August 2024), and Column Classification Model (US20240330412A1, filed March 2023).",
+  },
+  {
+    q: "What does Chao Tan write about?",
+    a: "Data governance, data privacy, AI system security, performance engineering, API design, and engineering career — primarily from the perspective of an engineer who has owned production systems at scale.",
+  },
+  {
+    q: "How can I contact Chao Tan?",
+    a: "Email chaos.tc@gmail.com, GitHub @tanchao, or Twitter/X @chaostan. For consulting or advisory engagements, see the Work page at tanchao.xyz/hire-me/.",
+  },
+];
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faq.map(({ q, a }) => ({
+    "@type": "Question",
+    name: q,
+    acceptedAnswer: { "@type": "Answer", text: a },
+  })),
+};
 ---
 
 <Base
   title="About"
   description="About Chao Tan — data governance and privacy engineer at Snowflake. 18 years building and securing large-scale systems. Former Amazon Alexa tech lead."
-  jsonLd={personSchema}
+  jsonLd={[personSchema, faqSchema]}
   suppressGlobalPerson
 >
   <h1>About Me</h1>
@@ -84,6 +121,10 @@ const personSchema = {
     <p class="p-name" style="display:none;">Chao Tan</p>
     <a class="u-url" href="https://tanchao.xyz/" style="display:none;">tanchao.xyz</a>
     <a class="u-email" href="mailto:chaos.tc@gmail.com" style="display:none;">chaos.tc@gmail.com</a>
+
+    <p>
+      <strong>Chao Tan</strong> is a data governance and privacy engineer at Snowflake. He built Snowflake's data classification platform — the system that automatically discovers and tags sensitive data across customer accounts. Before Snowflake, he was a tech lead on Amazon Alexa's cloud platform, owning APIs at hundreds of millions of requests per day and leading a 14-person engineering team. He writes about data protection, AI system security, and performance engineering.
+    </p>
 
     <p>
       My name is <strong>Chao Tan</strong> (谭超). Call me <code>Chao</code> or <code>tc</code>.
@@ -146,5 +187,15 @@ const personSchema = {
       <a href="https://github.com/tanchao" rel="noopener">GitHub</a> ·
       <a href="https://twitter.com/chaostan" rel="noopener">Twitter @chaostan</a>
     </p>
+
+    <h2>FAQ</h2>
+    <dl style="margin:0;">
+      {faq.map(({ q, a }) => (
+        <>
+          <dt style="font-family:var(--font-sans);font-weight:600;margin:1rem 0 0.25rem;">{q}</dt>
+          <dd style="margin:0 0 0.5rem;color:var(--text-muted);">{a}</dd>
+        </>
+      ))}
+    </dl>
   </div>
 </Base>
