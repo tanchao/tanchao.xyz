@@ -27,6 +27,14 @@ const siteUrl = "https://tanchao.xyz";
 const resolvedCanonical = canonicalUrl ?? new URL(Astro.url.pathname, siteUrl).href;
 const resolvedOg = ogImage.startsWith("http") ? ogImage : new URL(ogImage, siteUrl).href;
 const fullTitle = title === "tanchao's blog" ? title : `${title} — tanchao's blog`;
+
+// Per llmstxt.org, llms.txt is a root-level discovery file. Advertising it as
+// rel="alternate" on every page causes some LLM agents (and tools like
+// Anthropic's WebFetch) to treat llms.txt as the canonical text view of every
+// URL — collapsing the whole site into one document for those clients. Limit
+// the alternate links to the homepage; crawlers still discover the file at
+// /llms.txt directly via the well-known path and the sitemap.
+const isHomepage = Astro.url.pathname === "/";
 ---
 
 <meta charset="UTF-8" />
@@ -77,18 +85,22 @@ const fullTitle = title === "tanchao's blog" ? title : `${title} — tanchao's b
   href={`${siteUrl}/rss.xml`}
   title="tanchao's blog RSS Feed"
 />
-<link
-  rel="alternate"
-  type="text/plain"
-  href={`${siteUrl}/llms.txt`}
-  title="LLMs.txt"
-/>
-<link
-  rel="alternate"
-  type="text/plain"
-  href={`${siteUrl}/llms-full.txt`}
-  title="LLMs full text"
-/>
+{isHomepage && (
+  <>
+    <link
+      rel="alternate"
+      type="text/plain"
+      href={`${siteUrl}/llms.txt`}
+      title="LLMs.txt"
+    />
+    <link
+      rel="alternate"
+      type="text/plain"
+      href={`${siteUrl}/llms-full.txt`}
+      title="LLMs full text"
+    />
+  </>
+)}
 <link rel="manifest" href="/site.webmanifest" />
 
 <!-- Favicon & Icons -->

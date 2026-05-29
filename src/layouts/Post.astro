@@ -147,7 +147,10 @@ const tocHeadings = headings.filter((h) => h.depth === 2);
     <header style="margin-bottom:2rem;">
       <h1 style="margin-bottom:0.5rem;">{title}</h1>
       <div style="font-family:var(--font-sans);font-size:0.875rem;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;">
-        <time datetime={date.toISOString()}>{dateStr}</time>
+        <span>
+          By <a href="/about/" rel="author" style="color:var(--text);text-decoration:none;border-bottom:1px dotted currentColor;">Chao Tan</a>
+        </span>
+        <span>· <time datetime={date.toISOString()}>{dateStr}</time></span>
         {updatedStr && <span>· updated {updatedStr}</span>}
         {readingTime && <span>· {readingTime} min read</span>}
       </div>
@@ -216,6 +219,27 @@ const tocHeadings = headings.filter((h) => h.depth === 2);
       </section>
     )}
   </article>
+
+  <aside
+    aria-label="About the author"
+    style="margin-top:3rem;padding:1.25rem 1.5rem;background:var(--bg-alt);border:1px solid var(--border);border-radius:6px;font-family:var(--font-sans);"
+  >
+    <p style="margin:0 0 0.5rem;font-size:0.75rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--text-muted);">
+      About the author
+    </p>
+    <p style="margin:0 0 0.75rem;font-size:0.95rem;line-height:1.55;color:var(--text);">
+      <strong>Chao Tan</strong> is a data governance and privacy engineer at Snowflake. He built Snowflake's data classification platform and was previously a tech lead on Amazon Alexa. He writes about data protection, AI system security, and performance engineering.
+    </p>
+    <p style="margin:0;font-size:0.875rem;">
+      <a href="/about/" rel="author">More about Chao →</a>
+      &nbsp;·&nbsp;
+      <a href="/hire-me/">Work with me</a>
+      &nbsp;·&nbsp;
+      <a href="https://github.com/tanchao" rel="noopener">GitHub ↗</a>
+      &nbsp;·&nbsp;
+      <a href="https://www.linkedin.com/in/tanchao" rel="noopener">LinkedIn ↗</a>
+    </p>
+  </aside>
 
   <script>
     async function renderMermaid() {
