@@ -183,6 +183,16 @@ const INITIAL_BACKOFF_MS = 2_000;
 // IP-reputation scoring. Set via the SUBSTACK_COOKIE env var / GH secret.
 const SUBSTACK_COOKIE = process.env.SUBSTACK_COOKIE?.trim();
 
+// Fail fast in CI if the cookie is missing. Without this guard, GH Actions
+// runs would hit the Cloudflare WAF, fall into the "silent-skip" branch,
+// and report success — exactly the regression PR #18 left us with.
+if (process.env.GITHUB_ACTIONS === "true" && !SUBSTACK_COOKIE && !DRY_RUN) {
+  console.error(
+    "SUBSTACK_COOKIE is not set. CI runs require it to bypass Cloudflare bot management on data-center IPs. Add it as a repo secret (substack.sid=<value> from a logged-in browser).",
+  );
+  process.exit(1);
+}
+
 async function fetchWithRetry(url: string): Promise<Response | null> {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const headers: Record<string, string> = {
