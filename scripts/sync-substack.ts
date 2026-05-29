@@ -175,22 +175,51 @@ type FeedPage = {
 const MAX_RETRIES = 3;
 const INITIAL_BACKOFF_MS = 2_000;
 
+// Optional Substack auth cookie. From a residential IP, the unauthenticated
+// reader API works fine. From GitHub Actions runners, Cloudflare's bot
+// management blocks the data-center IP regardless of User-Agent. Sending a
+// valid `substack.sid` (and optionally other Substack cookies) typically
+// bypasses the block because authenticated requests are exempt from
+// IP-reputation scoring. Set via the SUBSTACK_COOKIE env var / GH secret.
+const SUBSTACK_COOKIE = process.env.SUBSTACK_COOKIE?.trim();
+
+// Fail fast in CI if the cookie is missing. Without this guard, GH Actions
+// runs would hit the Cloudflare WAF, fall into the "silent-skip" branch,
+// and report success — exactly the regression PR #18 left us with.
+if (process.env.GITHUB_ACTIONS === "true" && !SUBSTACK_COOKIE && !DRY_RUN) {
+  console.error(
+    "SUBSTACK_COOKIE is not set. CI runs require it to bypass Cloudflare bot management on data-center IPs. Add it as a repo secret (substack.sid=<value> from a logged-in browser).",
+  );
+  process.exit(1);
+}
+
 async function fetchWithRetry(url: string): Promise<Response | null> {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const res = await fetch(url, {
-      headers: {
-        Accept: "application/json",
-        "Accept-Language": "en-US,en;q=0.9",
-        "User-Agent":
-          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-        Referer: "https://substack.com/@sprtn/notes",
-        Origin: "https://substack.com",
-      },
-    });
+    const headers: Record<string, string> = {
+      Accept: "application/json",
+      "Accept-Language": "en-US,en;q=0.9",
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+      Referer: "https://substack.com/@sprtn/notes",
+      Origin: "https://substack.com",
+    };
+    if (SUBSTACK_COOKIE) headers.Cookie = SUBSTACK_COOKIE;
+
+    const res = await fetch(url, { headers });
 
     if (res.ok) return res;
 
     if (res.status === 403 || res.status === 401) {
+      // When SUBSTACK_COOKIE is set, a 401/403 means the cookie is invalid
+      // or expired — fail loudly so we notice and refresh it. Without a
+      // cookie (e.g. local dry-run), keep the original silent-skip so the
+      // workflow stays green during transient WAF blocks.
+      if (SUBSTACK_COOKIE) {
+        console.error(
+          `Substack API returned ${res.status} despite SUBSTACK_COOKIE being set — the cookie is likely expired or invalid. Refresh it from a logged-in browser and update the GH secret.`,
+        );
+        process.exit(1);
+      }
       console.warn(
         `⚠ Substack API returned ${res.status} — access may be blocked. Skipping sync.`,
       );

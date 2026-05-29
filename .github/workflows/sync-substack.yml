@@ -22,6 +22,8 @@ jobs:
       - run: npm ci
 
       - name: Sync Substack notes
+        env:
+          SUBSTACK_COOKIE: ${{ secrets.SUBSTACK_COOKIE }}
         run: npm run sync:substack
 
       - name: Commit new notes
