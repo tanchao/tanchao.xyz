@@ -159,7 +159,7 @@ npm run lint         # Biome lint
 npm run format       # Biome format (write)
 npm run new:post -- "My Title"     # Scaffold a new post file with today's date
 npm run new:project -- "My Project" # Scaffold a new project file
-npm run sync:substack               # Fetch Substack RSS and import new notes (also runs nightly via CI)
+npm run sync:substack               # Fetch Substack RSS and import new notes (also runs nightly via local launchd; see Substack sync below)
 ```
 
 ## How to add a post
@@ -324,6 +324,54 @@ Theme variables are in `src/styles/global.css` as CSS custom properties on `:roo
 - `--link`, `--link-hover` — link color (accent green)
 
 Dark mode is toggled by adding/removing the `dark` class on `<html>`. The preference is stored in `localStorage.theme`. An inline script in `Head.astro` applies the class before first paint (no flash).
+
+## Substack sync (local launchd job)
+
+Substack notes are synced into `src/content/notes/` by a daily launchd job
+running on Chao's Mac, not by GitHub Actions. Substack sits behind
+Cloudflare bot management, which blocks data-center IPs (GH Actions
+runners, CF Workers) regardless of headers or session cookies. Running
+from a residential IP is the only reliable path we've found.
+
+Branch protection on `main` blocks direct push, so the script pushes a
+`chore/sync-substack-YYYY-MM-DD` branch, opens a PR, and enables
+auto-merge. The `build` CI gates the merge.
+
+### One-time setup (Mac only)
+
+```bash
+# 1. Clone a dedicated sync copy of the repo (separate from your dev clone).
+git clone github-personal:tanchao/tanchao.xyz ~/.cache/tanchao-substack-sync
+cd ~/.cache/tanchao-substack-sync
+npm ci
+
+# 2. Install the launchd plist.
+cp scripts/launchd/xyz.tanchao.substack-sync.plist \
+   ~/Library/LaunchAgents/xyz.tanchao.substack-sync.plist
+launchctl bootstrap "gui/$(id -u)" \
+   ~/Library/LaunchAgents/xyz.tanchao.substack-sync.plist
+
+# 3. Smoke test by triggering the job manually.
+launchctl kickstart -k "gui/$(id -u)/xyz.tanchao.substack-sync"
+tail -f ~/Library/Logs/substack-sync.out.log
+```
+
+### Files
+
+- `scripts/sync-substack-local.sh` — the script launchd runs. Refuses to
+  run if cwd is not on `main` or has uncommitted changes, so it's safe
+  even if you point it at the wrong clone.
+- `scripts/launchd/xyz.tanchao.substack-sync.plist` — the launchd job
+  definition. Runs daily at 06:00 local time and logs to
+  `~/Library/Logs/substack-sync.{out,err}.log`.
+
+### Disabling / removing
+
+```bash
+launchctl bootout "gui/$(id -u)" \
+   ~/Library/LaunchAgents/xyz.tanchao.substack-sync.plist
+rm ~/Library/LaunchAgents/xyz.tanchao.substack-sync.plist
+```
 
 ## Cloudflare Pages — environment variables
 
