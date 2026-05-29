@@ -52,17 +52,58 @@ const workSchema = {
     },
   ],
 };
+
+const faq = [
+  {
+    q: "Is Chao Tan available for hire?",
+    a: "Selectively open to conversations about Staff, Principal, or Architect-level roles in data governance, data privacy, AI governance, or security. He is currently a Data Governance & Privacy Engineer at Snowflake. Contact via chaos.tc@gmail.com.",
+  },
+  {
+    q: "What kind of roles is Chao Tan looking for?",
+    a: "Roles where he owns how data is classified, protected, and governed — particularly at companies building AI systems that need governance designed in before regulators force it. Strong preference for engineering cultures that prize ownership and mechanisms over meetings.",
+  },
+  {
+    q: "What is Chao Tan's experience level?",
+    a: "18 years building and securing large-scale systems across four companies and three countries. Currently at Snowflake (since 2022) after six years as a Senior SDE and Tech Lead on Amazon Alexa's cloud platform, four years on HSBC Global Markets Technology, and one year as a release engineer at eBay.",
+  },
+  {
+    q: "What is Chao Tan's most relevant accomplishment for a data governance role?",
+    a: "He built Snowflake's data classification platform — the system that automatically discovers and tags sensitive data across Snowflake's cloud — and delivered a 10x performance improvement on the core classification function (p90 latency from 80s to 10s) by innovating on Snowflake's UDTF parallel scan architecture.",
+  },
+  {
+    q: "What is Chao Tan's most relevant leadership accomplishment?",
+    a: "At Amazon Alexa, he led a 14-person engineering team that decoupled THE Alexa cloud service into three fundamental platform services, impacting 10,000+ internal developers. He also built A2GS, the backend for Amazon's Astro robot, from scratch — a Tier-1 service running at 100k+ TPS at millisecond latency.",
+  },
+  {
+    q: "Where is Chao Tan based?",
+    a: "Bellevue, Washington, USA. See the Contact section for outreach.",
+  },
+];
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faq.map(({ q, a }) => ({
+    "@type": "Question",
+    name: q,
+    acceptedAnswer: { "@type": "Answer", text: a },
+  })),
+};
 ---
 
 <Base
   title="Work"
   description="Chao Tan — 18 years building and securing large-scale data systems. Expert in data governance, AI system security, and performance engineering. Currently at Snowflake."
-  jsonLd={workSchema}
+  jsonLd={[workSchema, faqSchema]}
   suppressGlobalPerson
 >
   <h1>Work</h1>
 
   <div class="prose">
+    <p>
+      <strong>Chao Tan</strong> is a data governance and privacy engineer at Snowflake with 18 years of production engineering experience. He built Snowflake's data classification platform, delivered a 10x performance improvement on its core classification function, and previously led a 14-person team on Amazon Alexa's cloud platform. Selectively open to Staff, Principal, or Architect-level roles in data governance, AI governance, privacy, or security.
+    </p>
+
     <p>
       I'm a data governance and privacy engineer with 18 years of experience building and securing large-scale systems. I'm selectively open to conversations about roles where I can shape how organizations govern, protect, and classify data — particularly as AI systems make this exponentially harder and more important.
     </p>
@@ -118,6 +159,16 @@ const workSchema = {
       <li>Strong engineering culture with ownership and mechanisms, not just meetings</li>
       <li>Staff / Principal / Architect-level scope</li>
     </ul>
+
+    <h2>FAQ</h2>
+    <dl style="margin:0;">
+      {faq.map(({ q, a }) => (
+        <>
+          <dt style="font-family:var(--font-sans);font-weight:600;margin:1rem 0 0.25rem;">{q}</dt>
+          <dd style="margin:0 0 0.5rem;color:var(--text-muted);">{a}</dd>
+        </>
+      ))}
+    </dl>
 
     <h2>Contact</h2>
     <p>
