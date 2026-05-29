@@ -1,8 +1,19 @@
 ---
 title: "Tech recordings at Amazon"
 description: "A running log of technical learnings, career reflections, and engineering principles from my years at Amazon Alexa."
+tldr: "A 2021–2022 running log of engineering lessons from Amazon Alexa — API design as the central craft, performance tuning, COE root-cause culture, the 'make it cheap' mental model, and the habits that compound across teams."
 date: 2021-07-31
+updated: 2026-05-28
 tags: ["career", "engineering", "api", "performance"]
+faq:
+  - q: "What is COE at Amazon?"
+    a: "COE stands for Correction of Errors — Amazon's structured root-cause mechanism after an incident. The discipline is to drive 5-Whys until the root cause is fixed and remains fixed, not to complete a process form."
+  - q: "What does 'make it cheap' mean as an engineering principle?"
+    a: "Make latency cheap to reduce, availability cheap to raise, and the system cheap to change. The framing forces design choices that preserve optionality and lower the cost of future iteration."
+  - q: "What is the difference between best practice and benchmark?"
+    a: "Best practice is what your team currently does well. Benchmark is what the rest of the industry has moved to. A benchmark refresh can reveal that your inherited best practice is no longer best."
+  - q: "What defines an effective API design?"
+    a: "Focus on entity definition before everything else — what the entity is, why the business needs it, whether the world would need it in an ideal design. The best APIs are usable, secure, available, fast, and cheap at the same time; trade-offs between them are intentional, not accidental."
 ---
 
 ## Mission Statement
