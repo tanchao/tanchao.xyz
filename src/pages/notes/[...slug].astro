@@ -52,12 +52,12 @@ const blogPostingSchema = {
   <article>
     <header style="margin-bottom:2rem;">
       <h1>{note.data.title}</h1>
-      <time
-        datetime={note.data.date.toISOString()}
-        style="font-family:var(--font-sans);font-size:0.875rem;color:var(--text-muted);"
-      >
-        {dateStr}
-      </time>
+      <div style="font-family:var(--font-sans);font-size:0.875rem;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center;">
+        <span>
+          By <a href="/about/" rel="author" style="color:var(--text);text-decoration:none;border-bottom:1px dotted currentColor;">Chao Tan</a>
+        </span>
+        <span>· <time datetime={note.data.date.toISOString()}>{dateStr}</time></span>
+      </div>
       {note.data.sourceUrl && (
         <div style="margin-top:0.5rem;">
           <a
