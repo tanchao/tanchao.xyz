@@ -20,10 +20,10 @@ faq:
 
 > Part of the overview: [How Modern Data Platforms Protect Data](/posts/2026/05/13/how-modern-data-platforms-protect-data/).
 > Sibling deep-dives:
-> [Databricks Unity Catalog](/posts/2026/05/13/databricks-unity-catalog-data-protection/) ·
-> [Policy overlay vendors](/posts/2026/05/13/data-policy-overlay-vendors/) ·
-> [Governance-as-code with dbt + Terraform](/posts/2026/05/13/data-governance-as-code-dbt-terraform/) ·
-> [The third-party auditor's gap list](/posts/2026/05/13/data-platform-auditor-gaps/)
+> [Databricks Unity Catalog](/posts/2026/05/24/databricks-unity-catalog-data-protection/) ·
+> [Policy overlay vendors](/posts/2026/05/31/data-policy-overlay-vendors/) ·
+> [Governance-as-code with dbt + Terraform](/posts/2026/06/07/data-governance-as-code-dbt-terraform/) ·
+> [The third-party auditor's gap list](/posts/2026/06/14/data-platform-auditor-gaps/)
 
 BigQuery is a serverless data warehouse. There are no clusters to configure, no storage nodes to harden, no OS patches to schedule. Your entire protection model lives in three places: IAM, the catalog (policy tags and taxonomy), and the query engine (row filters, column masks, authorized views). Everything else — VPC Service Controls, KMS, audit logs — layers on top of those three.
 
@@ -208,7 +208,7 @@ Cloud Audit Logs are the evidence layer that makes every other control in this p
 
 - **Classification automation.** Sensitive Data Protection is a separate service. The scan → detect → tag pipeline is yours to build and maintain. Without it, policy tags drift.
 - **Lineage beyond SQL.** Lineage is automatic for BigQuery SQL jobs but partial or absent for Dataflow, Dataproc, BQML, and custom pipelines. If your derived tables cross these boundaries, you have blind spots.
-- **Policy-as-code composition.** Terraform providers for BigQuery and Data Catalog exist, but composing them with dbt (which owns the table schemas) requires manual layering. This is covered in the [IaC deep-dive](/posts/2026/05/13/data-governance-as-code-dbt-terraform/).
+- **Policy-as-code composition.** Terraform providers for BigQuery and Data Catalog exist, but composing them with dbt (which owns the table schemas) requires manual layering. This is covered in the [IaC deep-dive](/posts/2026/06/07/data-governance-as-code-dbt-terraform/).
 - **Cross-project sharing via Analytics Hub.** Analytics Hub is a separate sharing surface with its own access model and audit trail. Most teams miss it as an attack surface — a shared dataset listed in Analytics Hub is accessible to any subscriber who accepted the listing.
 - **Data Access log costs.** Enabling Data Access logs on high-query-volume projects generates substantial log volume. Budget for it, or use exclusion filters to scope logging to governed datasets only.
 
