@@ -26,10 +26,10 @@ The audience is the engineer or architect who needs to explain their platform's 
 
 > **The series:**
 > - [Data protection in BigQuery](/posts/2026/05/17/bigquery-data-protection/)
-> - [Data protection in Databricks Unity Catalog](/posts/2026/05/13/databricks-unity-catalog-data-protection/)
-> - [Data policy overlay vendors: Immuta, Privacera, OneTrust, Lake Formation](/posts/2026/05/13/data-policy-overlay-vendors/)
-> - [Data governance as code: dbt + Terraform patterns](/posts/2026/05/13/data-governance-as-code-dbt-terraform/)
-> - [Where the auditor will find gaps in your data platform](/posts/2026/05/13/data-platform-auditor-gaps/)
+> - [Data protection in Databricks Unity Catalog](/posts/2026/05/24/databricks-unity-catalog-data-protection/)
+> - [Data policy overlay vendors: Immuta, Privacera, OneTrust, Lake Formation](/posts/2026/05/31/data-policy-overlay-vendors/)
+> - [Data governance as code: dbt + Terraform patterns](/posts/2026/06/07/data-governance-as-code-dbt-terraform/)
+> - [Where the auditor will find gaps in your data platform](/posts/2026/06/14/data-platform-auditor-gaps/)
 
 ## What "data protection" means here
 
@@ -109,19 +109,19 @@ Strong IAM granularity, mature KMS options, and a real perimeter with VPC Servic
 
 Strong namespace model, ABAC, lineage, and audit you can query in SQL. Watch for legacy `hive_metastore`, changing serverless controls, and region-by-region sprawl.
 
-→ Deep dive: [Data protection in Databricks Unity Catalog](/posts/2026/05/13/databricks-unity-catalog-data-protection/)
+→ Deep dive: [Data protection in Databricks Unity Catalog](/posts/2026/05/24/databricks-unity-catalog-data-protection/)
 
 ### Immuta, Privacera, OneTrust, Lake Formation (overlays)
 
 Useful when you need one policy layer across multiple engines, purpose-based access, or deeper masking. The tradeoff is another control plane to keep in sync with the warehouse. Lake Formation is the AWS-native version of this pattern.
 
-→ Deep dive: [Data policy overlay vendors](/posts/2026/05/13/data-policy-overlay-vendors/)
+→ Deep dive: [Data policy overlay vendors](/posts/2026/05/31/data-policy-overlay-vendors/)
 
 ### dbt + Terraform (the IaC layer)
 
 Not a platform. This is the layer that keeps the others consistent. The clean split is dbt for model-bound metadata and Terraform for platform-bound policy.
 
-→ Deep dive: [Data governance as code: dbt + Terraform patterns](/posts/2026/05/13/data-governance-as-code-dbt-terraform/)
+→ Deep dive: [Data governance as code: dbt + Terraform patterns](/posts/2026/06/07/data-governance-as-code-dbt-terraform/)
 
 ### Where each platform leans hardest
 
@@ -142,7 +142,7 @@ The recurring findings, summarized. The deep-dive covers recovery patterns for e
 - DSAR and right-to-be-forgotten on Iceberg or Delta, where deletion semantics are subtle.
 - External sharing without a traceable DPA on the same principal that received the share.
 
-→ Full treatment: [Where the auditor will find gaps in your data platform](/posts/2026/05/13/data-platform-auditor-gaps/)
+→ Full treatment: [Where the auditor will find gaps in your data platform](/posts/2026/06/14/data-platform-auditor-gaps/)
 
 ## What this post skips
 
@@ -157,7 +157,7 @@ The recurring findings, summarized. The deep-dive covers recovery patterns for e
 This post pulls from each deep-dive's reference list. The deep-dive posts hold the full per-section citations.
 
 - BigQuery deep-dive Sources: see [Data protection in BigQuery](/posts/2026/05/17/bigquery-data-protection/#sources)
-- Databricks deep-dive Sources: see [Data protection in Databricks Unity Catalog](/posts/2026/05/13/databricks-unity-catalog-data-protection/#sources)
-- Overlay vendors deep-dive Sources: see [Data policy overlay vendors](/posts/2026/05/13/data-policy-overlay-vendors/#sources)
-- IaC deep-dive Sources: see [Data governance as code](/posts/2026/05/13/data-governance-as-code-dbt-terraform/#sources)
-- Auditor gaps deep-dive Sources: see [Where the auditor will find gaps](/posts/2026/05/13/data-platform-auditor-gaps/#sources)
+- Databricks deep-dive Sources: see [Data protection in Databricks Unity Catalog](/posts/2026/05/24/databricks-unity-catalog-data-protection/#sources)
+- Overlay vendors deep-dive Sources: see [Data policy overlay vendors](/posts/2026/05/31/data-policy-overlay-vendors/#sources)
+- IaC deep-dive Sources: see [Data governance as code](/posts/2026/06/07/data-governance-as-code-dbt-terraform/#sources)
+- Auditor gaps deep-dive Sources: see [Where the auditor will find gaps](/posts/2026/06/14/data-platform-auditor-gaps/#sources)
