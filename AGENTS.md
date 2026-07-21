@@ -159,7 +159,7 @@ npm run lint         # Biome lint
 npm run format       # Biome format (write)
 npm run new:post -- "My Title"     # Scaffold a new post file with today's date
 npm run new:project -- "My Project" # Scaffold a new project file
-npm run sync:substack               # Fetch Substack RSS and import new notes (also runs nightly via CI)
+npm run sync:substack               # Fetch Substack RSS and import new notes (manual only — run from a residential IP)
 ```
 
 ## How to add a post
@@ -230,6 +230,35 @@ faq:
   - q: "Short question?"
     a: "Direct, citable answer."
 ```
+
+## GitHub identity
+
+This repo is **personal**. Chao maintains a separate company GitHub profile that is used in other repos on the same machine. Before running any `git` or `gh` command in this repo, verify the active identity is the personal account `tanchao`.
+
+### Required pre-flight check
+
+At the start of any session that will touch git, `gh`, or remote operations, run:
+
+```bash
+gh auth status
+git config user.name
+git config user.email
+git remote -v
+```
+
+Verify all of the following:
+
+- `gh auth status` shows the account `tanchao` as the **active** account for `github.com`.
+- `git config user.name` and `git config user.email` resolve to the personal identity (not the company one).
+- `git remote -v` for `origin` points at a `tanchao/...` repo (SSH host alias `github-personal` is expected — see `~/.ssh/config`).
+
+If any check shows a company account, **stop** and tell the user before doing anything else. Do not attempt to switch accounts automatically — let the user decide how to fix it (`gh auth switch`, updating local git config, or correcting the remote URL).
+
+### Rules (hard constraints)
+
+- **Never commit, push, or open a PR using a company identity** from this repo.
+- **Never auto-run `gh auth switch`, `gh auth login`, or rewrite `~/.gitconfig`** — only the user changes identity.
+- If unsure which profile is active, **ask** before proceeding.
 
 ## Git workflow
 

@@ -4,6 +4,13 @@ Status: **done** (Substack); Bluesky deferred
 Created: 2026-05-06
 Shipped: 2026-05-07
 
+> **2026-06-01 — sync is now manual.** The nightly GitHub Action
+> (`.github/workflows/sync-substack.yml`) was removed. Substack sits behind
+> Cloudflare bot management that blocks data-center IPs (GitHub Actions, CF
+> Workers), so the scheduled job failed every day. Run `npm run sync:substack`
+> manually from a residential IP (your Mac on home Wi-Fi). Do **not** re-add a
+> CI workflow for this — it cannot succeed from a data-center IP.
+
 ## Shipped — divergences from plan
 
 The Substack sync pipeline is fully implemented. The shipped version differs from the plan in the following ways:
