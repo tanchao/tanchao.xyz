@@ -27,6 +27,18 @@ const noteSchema = z.object({
   draft: z.boolean().default(false),
 });
 
+// `sources` is a multi-line YAML array of objects; the lightweight parser in
+// this file can't represent it, so it's validated by Astro at build time only.
+const pulseSchema = z.object({
+  title: z.string().max(120),
+  description: z.string().optional(),
+  tldr: z.string().optional(),
+  date: z.coerce.date(),
+  week: z.string().optional(),
+  tags: z.array(z.string()).default([]),
+  draft: z.boolean().default(false),
+});
+
 const projectSchema = z.object({
   title: z.string().max(80),
   description: z.string().optional(),
@@ -86,6 +98,7 @@ function checkDir(dir: string, schema: z.ZodObject<z.ZodRawShape>, label: string
 checkDir(join(process.cwd(), "src/content/posts"), postSchema as z.ZodObject<z.ZodRawShape>, "posts");
 checkDir(join(process.cwd(), "src/content/notes"), noteSchema as z.ZodObject<z.ZodRawShape>, "notes");
 checkDir(join(process.cwd(), "src/content/projects"), projectSchema as z.ZodObject<z.ZodRawShape>, "projects");
+checkDir(join(process.cwd(), "src/content/pulse"), pulseSchema as z.ZodObject<z.ZodRawShape>, "pulse");
 
 if (errors === 0) {
   console.log("✅ All content validated successfully.");

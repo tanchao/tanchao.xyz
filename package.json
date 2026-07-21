@@ -16,7 +16,8 @@
     "format": "biome format --write ./src ./scripts",
     "new:post": "npx tsx scripts/new-post.ts",
     "new:project": "npx tsx scripts/new-project.ts",
-    "sync:substack": "npx tsx scripts/sync-substack.ts"
+    "sync:substack": "npx tsx scripts/sync-substack.ts",
+    "pulse:fetch": "npx tsx scripts/pulse/fetch.ts"
   },
   "dependencies": {
     "@astrojs/mdx": "^5.0.4",
