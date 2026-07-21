@@ -3,7 +3,7 @@ title: "Customize OpenAI privacy-filter for Snowflake semantic_categories"
 description: "Fine-tune OpenAI's privacy-filter model on Snowflake's semantic_categories taxonomy, then evaluate against a hand-labeled holdout."
 status: active
 started: 2026-04-23
-updated: 2026-05-06
+updated: 2026-07-20
 tags: ["data-governance", "llm", "snowflake", "evals"]
 draft: false
 ---
@@ -26,6 +26,9 @@ OpenAI's [privacy-filter model](https://openai.com/index/introducing-openai-priv
 - [Community fine-tuned variants](https://huggingface.co/models?other=base_model%3Afinetune%3Aopenai%2Fprivacy-filter) — existing fine-tunes including quantized and domain-specific adaptations
 - [Snowflake `EXTRACT_SEMANTIC_CATEGORIES`](https://docs.snowflake.com/en/sql-reference/functions/extract_semantic_categories) — reference taxonomy (47 categories as of 8.x)
 - [ai4privacy/pii-masking-300k](https://huggingface.co/datasets/ai4privacy/pii-masking-300k) — OpenPII-220k (27 PII classes, 6 languages) + FinPII-80k (~20 finance/insurance classes); ~98.3% label accuracy
+- [Snowflake ML Jobs overview](https://docs.snowflake.com/en/developer-guide/snowflake-ml/ml-jobs/overview) — run arbitrary Python ML workloads on Snowflake GPU compute pools via `@remote` decorator or `submit_*` APIs
+- [Snowflake distributed training](https://docs.snowflake.com/en/developer-guide/snowflake-ml/distributed-training) — `PyTorchDistributor` for multi-node/multi-GPU training inside Container Runtime
+- [SPCS AWS instance families](https://docs.snowflake.com/en/developer-guide/snowpark-container-services/instance-families-aws) — GPU_NV_S (1x A10G 24 GB) through GPU_NV_L (8x A100 320 GB) and GPU_L40S/GPU_R6K
 
 ---
 
@@ -67,3 +70,39 @@ OpenAI's [privacy-filter model](https://openai.com/index/introducing-openai-priv
 - **Label skew** — ai4privacy over-represents `firstname`; eval needs stratified sampling to avoid misleading macro-F1.
 - **OOD gap** — ai4privacy covers education/health/psychology/finance; Snowflake customer data (log lines, transaction records, support tickets) may differ.
 - **Licensing** — ai4privacy is academic-friendly; production use at Snowflake needs commercial license or synthetic dataset alternative.
+
+---
+
+## 2026-07-20 — can we train this on Snowflake?
+
+### The question
+
+The original plan assumed a local A100 or RTX 4090. The question is whether we can run the full `opf train` pipeline on the Snowflake platform instead — keeping training data, labeled holdout, and the fine-tuned checkpoint inside the Snowflake trust boundary. The short answer is yes, via [Snowflake ML Jobs](https://docs.snowflake.com/en/developer-guide/snowflake-ml/ml-jobs/overview) on a GPU compute pool, but the product fit is narrow. The two turnkey Cortex fine-tuning offerings both miss by model family, so the right path is the general-purpose container runtime.
+
+### Paths considered
+
+**[Cortex Fine-Tuning](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-finetuning) (GA)** — LoRA-only, six pre-approved generative base models (`llama3-8b/70b`, `llama3.1-8b/70b`, `mistral-7b`, `mixtral-8x7b`), strict `prompt`/`completion` schema. Not applicable: privacy-filter is an `AutoModelForTokenClassification`, not one of those models.
+
+**[Cortex Training](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-training) (Public Preview, June 2026)** — full fine-tune + reinforcement learning via managed GPU pools and ArcticTraining YAML config. Supported families: open-weight Qwen and Mistral only. Again, not applicable for this model.
+
+**[Snowflake ML Jobs](https://docs.snowflake.com/en/developer-guide/snowflake-ml/ml-jobs/overview) + Container Runtime on a GPU compute pool** — lift-and-shift of the existing `opf train` / HF `transformers` loop. Custom pip and HuggingFace packages install via `runtime_environment`. The `@remote` decorator or `submit_from_stage` submits the job; [`PyTorchDistributor`](https://docs.snowflake.com/en/developer-guide/snowflake-ml/distributed-training) handles multi-GPU data-parallel scaling. This is the right path.
+
+**Model Registry + SPCS serving** — after training, the fine-tuned checkpoint registers as a `token-classification` HF pipeline (`TransformersPipeline`) and deploys via `create_service` on a GPU pool. The holdout eval and p95 latency check run entirely in-account.
+
+### Revised plan (Snowflake ML Jobs)
+
+Replaces the local A100/4090 assumption from the 2026-04-23 PoC plan. Full setup walkthrough in [`docs/plans/privacy-filter/snowflake-setup.md`](../../docs/plans/privacy-filter/snowflake-setup.md). For a lower-friction serverless PoC alternative, see [`docs/plans/privacy-filter/modal-setup.md`](../../docs/plans/privacy-filter/modal-setup.md).
+
+1. **Data staging** — load ai4privacy English splits and any hand-labeled Snowflake-category examples into a Snowflake internal stage or table. Convert to `opf` JSONL inside a Container Runtime job using a CPU pool.
+2. **Smoke training** — submit `opf train` (5–10k examples, 1 epoch) as an ML Job on `GPU_NV_S` (1× A10G, 24 GB VRAM). This covers the LoRA path (~12 GB) and is the cheapest smoke check; validates the end-to-end pipeline without burning large-GPU credits.
+3. **Full fine-tune** — scale to `GPU_L40S` (up to 8× L40S, 48 GB each) or `GPU_NV_L` (8× A100, 40 GB each, on request) for the ~150k-example, 2–3 epoch run. Use `PyTorchDistributor` with `num_nodes=1, num_gpus=4` as the baseline; add nodes if epoch time exceeds a few hours.
+4. **Checkpoint to stage** — write final checkpoint safetensors to a named Snowflake stage. Pin the commit hash and epoch number in the stage path for reproducibility.
+5. **Register + serve** — log the fine-tuned model to the Model Registry from the stage (custom model path, not the HF repo id — see trade-offs below). Call `create_service` on a GPU pool for the holdout eval endpoint. Run `opf eval` against the held-out test set in-account; build the confusion matrix from the service response.
+
+### Trade-offs
+
+**GPU pool availability** — `GPU_NV_L` (A100) requires an on-request allocation; not always available in all AWS regions. `GPU_L40S` (L40S, 48 GB/GPU) and `GPU_R6K` (Blackwell RTX 6000, 96 GB/GPU) are GA as of May 2026 but AWS-only. Plan for `GPU_NV_M` (4× A10G, 96 GB total) as the fallback if neither is immediately available — it's sufficient for a distributed full fine-tune.
+
+**Data residency win** — this is the primary reason to prefer Snowflake over local: training data never leaves the account boundary. For a model intended to run on Snowflake customer data (log lines, transaction records, support tickets), keeping the labeled examples and the training run in the same governance perimeter is meaningful.
+
+**Model Registry caveat** — the `TransformersPipeline` wrapper in the Model Registry takes an HF Hub repo identifier by default. A custom fine-tuned checkpoint on a Snowflake stage needs to be logged either (a) via a custom `snowflake.ml.model.custom_model.CustomModel` wrapper that loads from the stage path, or (b) by pushing the checkpoint to a private HF repo first and referencing it. Option (a) keeps everything in-account; option (b) is simpler to implement. Decide before step 5.

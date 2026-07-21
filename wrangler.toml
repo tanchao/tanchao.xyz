@@ -2,7 +2,7 @@
 # https://developers.cloudflare.com/pages/configuration/wrangler-configuration/
 
 name = "tanchao-xyz"
-compatibility_date = "2024-09-23"
+compatibility_date = "2026-07-21"
 pages_build_output_dir = "dist"
 
 [vars]
