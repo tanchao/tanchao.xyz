@@ -50,4 +50,20 @@ const projects = defineCollection({
   }),
 });
 
-export const collections = { posts, notes, projects };
+const pulse = defineCollection({
+  loader: glob({ pattern: "**/*.{md,mdx}", base: "./src/content/pulse" }),
+  schema: z.object({
+    title: z.string().max(120),
+    description: z.string().optional(),
+    tldr: z.string().optional(),
+    date: z.coerce.date(),
+    week: z.string().optional(),
+    tags: z.array(z.string()).default([]),
+    draft: z.boolean().default(false),
+    sources: z
+      .array(z.object({ title: z.string(), url: z.string() }))
+      .optional(),
+  }),
+});
+
+export const collections = { posts, notes, projects, pulse };

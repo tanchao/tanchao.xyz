@@ -1,0 +1,51 @@
+---
+import { getCollection } from "astro:content";
+import Base from "../../layouts/Base.astro";
+import { pulseUrl, sortedPulse } from "../../lib/posts";
+
+const includeDrafts = !import.meta.env.PROD;
+const reports = sortedPulse(await getCollection("pulse"), includeDrafts);
+
+const byYear = new Map<number, typeof reports>();
+for (const report of reports) {
+  const year = report.data.date.getFullYear();
+  if (!byYear.has(year)) byYear.set(year, []);
+  byYear.get(year)!.push(report);
+}
+const years = [...byYear.keys()].sort((a, b) => b - a);
+---
+
+<Base
+  title="AI Pulse"
+  description="A weekly read on what materially changed in AI — evidence-linked, signal over noise."
+>
+  <h1>AI Pulse</h1>
+  <p style="font-family:var(--font-sans);font-size:0.95rem;color:var(--text-muted);margin-bottom:2rem;">
+    A weekly read on what materially changed in AI — grouped by theme, linked to primary sources.
+  </p>
+
+  {reports.length === 0 && (
+    <p style="font-family:var(--font-sans);color:var(--text-muted);">No reports yet.</p>
+  )}
+
+  {years.map(year => (
+    <div style="margin-bottom:2.5rem;">
+      <h2 style="font-family:var(--font-sans);font-size:1rem;font-weight:600;color:var(--text-muted);letter-spacing:0.05em;text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:0.375rem;margin-bottom:0.75rem;">
+        {year}
+      </h2>
+      <ul style="list-style:none;padding:0;margin:0;">
+        {byYear.get(year)!.map(report => (
+          <li style="display:flex;gap:1rem;align-items:baseline;padding:0.3rem 0;flex-wrap:wrap;">
+            <time
+              datetime={report.data.date.toISOString()}
+              style="font-family:var(--font-sans);font-size:0.85rem;color:var(--text-muted);white-space:nowrap;min-width:6rem;"
+            >
+              {report.data.date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}
+            </time>
+            <a href={pulseUrl(report.id)}>{report.data.title}</a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  ))}
+</Base>

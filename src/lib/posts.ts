@@ -51,6 +51,27 @@ export function noteUrl(id: string): string {
   return `/notes/${noteSlug(id)}/`;
 }
 
+/** Weekly pulse reports keep their filename as a flat slug:
+ *  `2026-07-21-week-30.md` → URL `/pulse/2026-07-21-week-30/`
+ */
+export function pulseSlug(id: string): string {
+  return id.replace(/\.(md|mdx)$/, "");
+}
+
+export function pulseUrl(id: string): string {
+  return `/pulse/${pulseSlug(id)}/`;
+}
+
+/** Sort pulse reports newest-first, excluding drafts in production */
+export function sortedPulse(
+  pulse: CollectionEntry<"pulse">[],
+  includeDrafts = false,
+): CollectionEntry<"pulse">[] {
+  return pulse
+    .filter((p) => includeDrafts || !p.data.draft)
+    .sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+}
+
 /** Count words in markdown/plain text content */
 export function wordCount(content: string): number {
   return content.trim().split(/\s+/).filter(Boolean).length;
