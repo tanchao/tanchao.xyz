@@ -4,7 +4,7 @@ description: "A field guide to RTK (Rust Token Killer): how it compresses CLI ou
 tldr: "RTK is a Rust CLI proxy that intercepts shell command output and compresses it 60–90% before the AI sees it. Install with brew install rtk; run rtk init -g for Claude Code or Cursor. It covers 100+ commands, adds under 10ms, and is the right default for shell-heavy agent sessions. Stack Caveman to shrink replies and NTK for semantic compression when rule-based filters plateau."
 date: 2026-07-21
 tags: ["ai", "agents", "devtools", "cli"]
-draft: true
+draft: false
 faq:
   - q: "What is RTK (Rust Token Killer)?"
     a: "RTK is an open-source CLI proxy that sits between an AI coding agent and the shell. It intercepts shell command output and compresses it using filtering, grouping, truncation, and deduplication before returning it to the agent's context window. A 30-minute coding session generates roughly 118,000 shell-tool tokens unfiltered; RTK reduces that to around 24,000."
