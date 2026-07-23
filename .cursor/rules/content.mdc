@@ -34,16 +34,11 @@ Required: `title`, `date`
 
 ## Writing style
 
-- Treat posts as professional notes from an experienced builder/operator, not academic writing or vendor marketing
-- Write from an engineer lens: systems, controls, evidence, failure modes, drift, trade-offs, and operating reality
-- Chao's voice: direct, technical, reflective, and honest about uncertainty
-- Prefer clean, simple language and short paragraphs
-- Use first person sparingly; the content should prove authority without self-justifying sections
-- Keep overview or pillar posts lighter and more scannable; push details into linked deep-dives
-- Prefer plain, direct titles; use the description for framing
-- Avoid labels like `survey`, `taxonomy`, `framework`, `comprehensive`, `definitive`, or "some thoughts on" unless they are clearly the best wording
+The single source of truth for voice and thinking is **`docs/voice.md`** — read it before drafting or editing content. It covers TC's voice fingerprint, mechanical rules, the anti-AI-isms blacklist, the phrase bank, thinking style, epistemic standards, and the collaboration protocol (expand a skeleton, then confirm gaps before filling — don't silently omit or invent). Do not duplicate that guidance here.
+
+Mechanical basics that stay in this rule because they're formatting, not voice:
 - Code blocks should use fenced backticks with language identifier
-- Chinese phrases are fine if they add context
+- Chinese phrases are fine if they add real context (per the register cards in `docs/voice.md`)
 
 ## GEO conventions
 
