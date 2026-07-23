@@ -18,6 +18,11 @@ This is a static Astro 6 blog. See AGENTS.md for the full project guide.
 - **Dark mode**: Controlled by `.dark` class on `<html>` — use CSS variables, not Tailwind `dark:` prefix
 - **No Decap CMS**: Content is authored in the editor and pushed via git
 
+## Voice and thinking
+
+- Before any writing or content work — including turning a skeleton/outline into a draft — read `docs/voice.md`, the single source of truth for TC's voice and thinking.
+- When TC hands you a skeleton, expand it, then surface and confirm missing or applicable gaps with TC before filling them in. Don't silently omit or invent.
+
 ## When editing content files
 
 - Validate frontmatter against the schema in `src/content.config.ts`

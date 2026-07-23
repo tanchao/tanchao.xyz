@@ -184,31 +184,7 @@ npm run sync:substack               # Fetch Substack RSS and import new notes (m
 
 When writing or editing content for `src/content/**`, treat `tanchao.xyz` as a personal engineering blog: professional notes from an experienced builder and operator, not academic writing, vendor marketing, or SEO filler.
 
-### Default lens
-
-- Write from an engineer's point of view: systems, controls, evidence, failure modes, drift, trade-offs, and operating reality.
-- The implied author stance is a staff-level software engineer who has owned production systems, reliability, data protection, governance, and performance work.
-- Let the content prove authority. Do not add self-justifying sections whose real purpose is to argue that the framework, taxonomy, or author is credible.
-
-### Tone
-
-- Use clean, simple language. Prefer short paragraphs, direct verbs, and high-signal sections.
-- Sound calm, precise, and opinionated in a grounded way.
-- Use first person sparingly. It should anchor perspective, not sell credentials.
-- The target reader impression is: this person has operated in this area, has a solid point, and is probably right.
-
-### What to emphasize
-
-- Prefer concrete discussion of controls, verification, logs, evidence, drift, and operational gaps.
-- Prefer "what actually happens in production" over abstract control maps or marketecture.
-- For overview or pillar posts, keep them scannable and lighter-weight. Push detail into linked deep-dives instead of overloading the top-level piece.
-
-### Titles and framing
-
-- Prefer plain, direct titles. Good patterns: `How ...`, `What ...`, `Where ...`, or a clear subject-only title.
-- Let the `description` carry the framing such as "short, practical overview" or "field guide."
-- Avoid terms like `survey`, `taxonomy`, `framework`, `comprehensive`, `definitive`, or `some thoughts on` unless they are clearly the best wording for the piece.
-- Avoid sections like "why this taxonomy is the right one" or other wording that tries to self-prove the argument. The content itself should do that work.
+The detailed voice guide is the single source of truth and lives in **[`docs/voice.md`](docs/voice.md)** — read it before writing or editing content. It covers TC's voice fingerprint, mechanical rules, an anti-AI-isms blacklist, a phrase bank, thinking style, epistemic standards, and the collaboration protocol for working from a skeleton (expand it, then confirm gaps before filling). Do not duplicate that guidance here; if this file and `docs/voice.md` ever disagree, `docs/voice.md` wins.
 
 ### GEO (Generative Engine Optimization)
 
