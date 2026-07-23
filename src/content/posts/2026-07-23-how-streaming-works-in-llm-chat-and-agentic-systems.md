@@ -22,19 +22,30 @@ faq:
 
 > Part of a series on agentic reliability. Previous: [How agents handle structured I/O](/posts/2026/07/22/how-agents-handle-structured-io/).
 
-Streaming, in an LLM chat or agentic system, is the practice of serving a model's output incrementally as it is generated instead of waiting for the full response. It matters because the producer is probabilistic and the output is structured — a partial chunk is not simply a smaller correct answer, it is an object that may still be wrong, incomplete, or unsafe to act on.
+Streaming, in an LLM chat or agentic system, is serving a model's output incrementally instead of waiting for the full response. It matters because the producer is probabilistic and the output is structured. A partial chunk isn't a smaller correct answer. It's an object that might still be wrong, incomplete, or unsafe to act on.
 
-The previous post in this series ended on that exact seam: constrained decoding makes the *final* JSON schema-valid, but a partial document mid-stream is invalid by definition, and a tool-call argument you execute early is worse than one you wait one more chunk for. That observation generalizes far past JSON. This post pulls the camera back to the whole streaming stack — how it actually works under the hood, why it is a different problem than streaming used to be, and what it shares with three systems that solved adjacent versions of it decades before LLMs existed: voice assistants, self-driving cars, and video streaming.
+I ended the last post on that exact seam: constrained decoding makes the *final* JSON schema-valid, but a partial document mid-stream is invalid by definition. A tool-call argument you execute early is worse than one you wait one more chunk for. That observation generalizes past JSON. This post pulls back to the whole streaming stack: how it works under the hood, why it's a different problem than streaming used to be, and what it shares with three systems that solved versions of this decades before LLMs existed — voice assistants, self-driving cars, and video streaming.
 
 ## How LLM streaming actually works
 
-Under the hood, an LLM chat response is not one generation step — it is two phases with opposite performance profiles, and the split explains almost every serving decision downstream. **Prefill** processes the entire input prompt in one parallel forward pass to build the key-value (KV) cache; it is compute-bound, and its duration sets **time-to-first-token (TTFT)**. **Decode** then generates one token at a time, re-reading the KV cache and model weights on every step; it is memory-bound, and the gap between tokens is **inter-token latency (ITL)**, the number that determines whether a chat feels like it's "typing" smoothly or stuttering.
+An LLM chat response isn't one generation step. It's two phases with opposite performance profiles, and that split explains almost every serving decision downstream.
+
+- **Prefill** processes the whole input prompt in one parallel forward pass to build the key-value (KV) cache. It's compute-bound, and its duration sets **time-to-first-token (TTFT)**.
+- **Decode** generates one token at a time, re-reading the KV cache and model weights on every step. It's memory-bound, and the gap between tokens is **inter-token latency (ITL)** — the number that decides whether a chat feels like it's typing smoothly or stuttering.
 
 Because the two phases compete for the same GPU when colocated — a long prompt's prefill blocks decode steps for every other concurrent request — 2026 production serving increasingly runs them on separate pools and streams the KV cache between them over RDMA or NVLink, a pattern called [disaggregated prefill/decode serving](https://docs.modular.com/glossary/ai/disaggregated-inference/). This is on top of continuous batching, which admits new requests into a running batch token-by-token instead of waiting for the slowest sequence in a fixed batch, and which is what makes concurrent chat sessions economical in the first place. [AWS describes the production motivation directly](https://aws.amazon.com/blogs/machine-learning/disaggregated-prefill-and-decode-for-llm-inference-on-sagemaker-hyperpod/): disaggregation lets you "tune TTFT and ITL independently" instead of trading one off against the other on shared hardware. What reaches the client on the wire is a sequence of server-sent events, one per token or per small delta — the transport is simple; the two-phase engine behind it is not.
 
 ## What makes streaming hard now
 
-Streaming used to mean serving bytes or records from a deterministic source, in order, for a consumer that only displayed them. Agentic streaming breaks every part of that sentence at once. The output is structured (JSON arguments, code, tables) but arrives token-by-token, so a chunk boundary rarely lines up with a structural boundary. Multiple tool calls can stream in parallel, keyed by index or ID, and a client has to buffer each independently rather than assume one linear stream. The consumer is sometimes a renderer and sometimes an executor — and only one of those is safe to hand a partial value to. [Provider streams also skip server-side validation](https://platform.claude.com/docs/en/agents-and-tools/tool-use/fine-grained-tool-streaming) for latency, which means the accumulation contract (start empty, append deltas, parse and guard on close) is the client's problem, not the server's. Add cancellation — a user stops the stream, or a downstream tool has already fired — and now the system needs to unwind state that was already partially committed. None of this existed in a `cat file | client` byte stream.
+Streaming used to mean serving bytes or records from a deterministic source, in order, to a consumer that only displayed them. Agentic streaming breaks every part of that:
+
+- The output is structured (JSON arguments, code, tables) but arrives token-by-token, so a chunk boundary rarely lines up with a structural boundary.
+- Multiple tool calls can stream in parallel, keyed by index or ID. A client has to buffer each independently, not assume one linear stream.
+- The consumer is sometimes a renderer and sometimes an executor, and only one of those is safe to hand a partial value to.
+- [Provider streams skip server-side validation](https://platform.claude.com/docs/en/agents-and-tools/tool-use/fine-grained-tool-streaming) for latency, so the accumulation contract — start empty, append deltas, parse and guard on close — is the client's problem, not the server's.
+- Cancellation means unwinding state that's already partially committed, whether the user stopped the stream or a downstream tool already fired.
+
+None of this existed in a `cat file | client` byte stream.
 
 ## Why this is different from streaming before
 
