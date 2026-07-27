@@ -8,3 +8,4 @@ Internal planning documents for tanchao.xyz. These are not rendered on the site 
 | [projects.md](projects.md) | Projects content type (long-running work) | **done** |
 | [syndication.md](syndication.md) | Substack/social media content sync | **done** (Substack); Bluesky deferred |
 | [agent-feedback-loop.md](agent-feedback-loop.md) | Autonomous agent via Claude Code Action | **done** — shipped with divergences from plan; see file for details |
+| [zhang-yiming-notes-vs-substack.md](zhang-yiming-notes-vs-substack.md) | Zhang Yiming's early public-thinking archive vs. TC's Substack notes (internal study, not published) | **done** |
