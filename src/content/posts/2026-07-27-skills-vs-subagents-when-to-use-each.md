@@ -22,7 +22,7 @@ faq:
     a: "Put it in the always-on project file (AGENTS.md, the cross-tool standard, or CLAUDE.md for Claude Code) if it applies to almost every task: build and test commands, project layout, coding conventions, pinned versions. Put it in a skill if it is a multi-step procedure needed only sometimes, such as a release checklist, a migration review, or an incident runbook. The line is always-on versus on-demand. One caveat from Vercel's 2026 evals: reference knowledge that should apply on every task is more reliable in the always-on file, because a skill only works if the agent decides to invoke it — which it failed to do in 56% of their test cases."
 ---
 
-> Part of a two-post series on structuring agentic systems. Next: [Make an agentic workflow deterministic and verifiable](/posts/2026/07/27/make-an-agentic-workflow-deterministic-and-verifiable/).
+> Part of a two-post series on structuring agentic systems. Next: [The verification loop decides how many agents you can run](/posts/2026/07/28/make-an-agentic-workflow-deterministic-and-verifiable/).
 
 A skill is reusable procedural knowledge that loads into your current session. A subagent is a separate context window you hand a task to, which runs in isolation and returns only a summary. They are complementary, not competing. The rule every frontier vendor converged on by mid-2026: reach for a skill first, and promote to a subagent only when isolation, parallelism, a cheaper model, or a locked-down toolset earns the extra cost.
 
@@ -107,4 +107,4 @@ Always-on files hold what is true every task. Skills change how the agent works.
 - **Subagents uniquely give you three things** skills can't: a restricted toolset, a different model, and real parallelism. If you need one of those, that is your signal.
 - **Keep the set small.** Eleven subagents you can't name is bloat with tool access.
 
-Next: the same primitives, one level up — [how to make an agentic workflow deterministic and verifiable](/posts/2026/07/27/make-an-agentic-workflow-deterministic-and-verifiable/).
+Next: the same primitives, one level up — [the verification loop decides how many agents you can run](/posts/2026/07/28/make-an-agentic-workflow-deterministic-and-verifiable/).
