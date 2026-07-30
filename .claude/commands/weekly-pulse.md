@@ -38,9 +38,11 @@ Read every item. Then:
 
 ## 3. Write the draft
 
-Derive the date from the bundle: use the `windowStart` date (the Monday of the week it covers)
-and the week number from `week` (e.g. `2026-W29` → `29`). Write to
-`src/content/pulse/<windowStart-date>-week-<NN>.md`, lowercase kebab-case.
+Derive the date from the bundle: use the **week-end Sunday** — that is `windowEnd` minus one day
+(`windowEnd` is the *exclusive* next-Monday boundary, so Sunday is `windowEnd − 1 day`) — and the
+week number from `week` (e.g. `2026-W29` → `29`). Dating by the Sunday the week closes, rather than
+the Monday it opened, keeps the slug from reading as stale mid-week. Write to
+`src/content/pulse/<windowEnd-Sunday-date>-week-<NN>.md`, lowercase kebab-case.
 
 Frontmatter (fill it in — no placeholders):
 
@@ -49,7 +51,7 @@ Frontmatter (fill it in — no placeholders):
 title: "AI Pulse — Week NN, YYYY"
 description: "<one sentence, ≤155 chars, the single biggest shift that week>"
 tldr: "<2–3 sentence executive summary>"
-date: <windowStart date, YYYY-MM-DD>
+date: <windowEnd Sunday date, YYYY-MM-DD>
 week: "<bundle week, e.g. 2026-W29>"
 tags: ["ai-pulse", "ai", "<2–3 more topical tags>"]
 draft: true
