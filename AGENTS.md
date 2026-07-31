@@ -73,7 +73,6 @@ functions/
   api/
     feedback.ts     CF Pages Function: Turnstile + rate-limit + GitHub Issues API
 scripts/
-  migrate.ts        One-time Jekyll migration script
   new-post.ts       Scaffold a new post file
   new-project.ts    Scaffold a new project file
   sync-substack.ts  Fetch Substack RSS and write notes to src/content/notes/
