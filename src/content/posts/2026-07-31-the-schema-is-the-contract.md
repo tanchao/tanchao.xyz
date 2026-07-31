@@ -50,12 +50,51 @@ The through-line: these are all **schema-on-write**. The structure is validated 
 
 If there is one contract language to know, it is [JSON Schema](https://json-schema.org/specification). It is a vocabulary for describing valid JSON, and it is itself written in JSON — the contract and the data speak the same syntax. Current release is 2020-12.
 
+Concretely, here is an object an agent might return — the weather for a city:
+
+```json
+{
+  "city": "Seattle",
+  "unit": "celsius",
+  "temperature": 14.5,
+  "conditions": ["rain", "wind"]
+}
+```
+
+And here is a JSON Schema that says what a valid object looks like. Note that the schema is itself JSON, describing JSON:
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "city":        { "type": "string" },
+    "unit":        { "type": "string", "enum": ["celsius", "fahrenheit"] },
+    "temperature": { "type": "number" },
+    "conditions":  { "type": "array", "items": { "type": "string" } }
+  },
+  "required": ["city", "unit", "temperature"],
+  "additionalProperties": false
+}
+```
+
+The schema is doing real work: `unit` must be one of two exact strings, `temperature` must be a number and is required, `conditions` is optional, and `additionalProperties: false` forbids any field you did not name. Hand `{"temperature": "hot"}` to a validator and it fails; that is the whole point.
+
 One caveat the marketing skips: it is **not a ratified standard**. JSON Schema has only ever been published as IETF Internet-Drafts, which have expired. It is a community specification. That has not slowed adoption at all, because everything else compiles to it.
 
-That last point is the one that matters for what follows. You rarely hand-write JSON Schema. You declare a type in the language you are already in, and a library emits the schema:
+That last point is what matters for the rest of this post. You rarely hand-write the schema above. You declare the type in the language you are already in, and a library emits the JSON Schema for you. The same weather contract in Pydantic (Python) is:
 
-- **Pydantic** (Python) — subclass `BaseModel`, then [`.model_json_schema()`](https://pydantic.dev/docs/validation/latest/concepts/json_schema/) produces the JSON Schema.
-- **Zod** (TypeScript) — [`z.object({...})`](https://zod.dev/) gives you runtime validation and a static type from one declaration.
+```python
+from typing import Literal
+from pydantic import BaseModel
+
+class Weather(BaseModel):
+    city: str
+    unit: Literal["celsius", "fahrenheit"]
+    temperature: float
+    conditions: list[str] = []
+```
+
+Call [`Weather.model_json_schema()`](https://pydantic.dev/docs/validation/latest/concepts/json_schema/) and you get the JSON Schema block above back. [Zod](https://zod.dev/) does the same in TypeScript from a `z.object({...})` declaration. This is the declarative move worth naming: you state the *shape you want* — as data or as types — never the *procedure* to check it, and that one declaration is the rule whether a validator, a REST API, or a model decoder consumes it.
 
 JSON Schema is the intermediate representation the whole ecosystem agrees on. Hold that thought — it is exactly what the model APIs took as their input.
 
@@ -81,7 +120,17 @@ The middle option is the one that turned "usually" into "always," so it is worth
 
 When OpenAI shipped [Structured Outputs in August 2024](https://openai.com/index/introducing-structured-outputs-in-the-api/), the promise was that the model *will always generate responses that adhere to your supplied JSON Schema*. The mechanism, in their words: for each schema they compute a grammar, and "after every token, our inference engine will determine which tokens are valid to be produced next based on the previously generated tokens and the rules within the grammar," masking the rest so invalid tokens have probability zero. The grammar is cached, so the cost is a one-time compile on first use, not per token. OpenAI reports their `gpt-4o-2024-08-06` scoring 100% on an internal schema-following eval against under 40% for the older `gpt-4-0613`. Those are OpenAI's own numbers — read them as best-case — but the guarantee is structural, not a benchmark.
 
-As of 2026 this is no longer a single-vendor trick. Anthropic ships [grammar-constrained sampling](https://platform.claude.com/docs/en/build-with-claude/structured-outputs) for strict tool use and structured outputs on Claude 4.5 and later, compiling the schema to a grammar and caching it the same way. Google's Gemini takes a [`responseSchema` with `responseMimeType: application/json`](https://ai.google.dev/gemini-api/docs/structured-output) — though Google is careful to note the output is *syntactically* correct JSON and you should still validate the values. And llama.cpp has done this locally for years with [GBNF grammars](https://github.com/ggml-org/llama.cpp/blob/master/grammars/README.md), auto-converted from a JSON Schema.
+A grammar is just a set of declarative rules for what the output may be. Here is a fragment in [GBNF](https://github.com/ggml-org/llama.cpp/blob/master/grammars/README.md), llama.cpp's grammar format, pinning the `unit` field to the same two values the schema allowed:
+
+```gbnf
+root ::= "{" ws "\"unit\":" ws unit "}"
+unit ::= "\"celsius\"" | "\"fahrenheit\""
+ws   ::= [ \t\n]*
+```
+
+At each step the decoder consults the rule and drives every token that would break it to zero probability. The model *cannot* emit `"kelvin"` — no valid path through the grammar reaches it. That is the difference from a prompt: the guarantee is structural, not the model choosing to behave.
+
+As of 2026 this is no longer a single-vendor trick. Anthropic ships [grammar-constrained sampling](https://platform.claude.com/docs/en/build-with-claude/structured-outputs) for strict tool use and structured outputs on Claude 4.5 and later, compiling the schema to a grammar and caching it the same way. Google's Gemini takes a [`responseSchema` with `responseMimeType: application/json`](https://ai.google.dev/gemini-api/docs/structured-output) — though Google is careful to note the output is *syntactically* correct JSON and you should still validate the values. And llama.cpp has auto-converted a JSON Schema to a GBNF grammar like the one above for years.
 
 The idea traces to open research. The Outlines paper, ["Efficient Guided Generation for Large Language Models"](https://arxiv.org/abs/2307.09702) (Willard and Louf, 2023), showed you can compile a regex or grammar to a finite-state machine and precompute, for each state, the set of tokens that keep the output valid — turning per-step constraint into a table lookup that "adds little to no overhead." OpenAI's own announcement credits Outlines, Guidance, and Instructor as prior art. The vendors productized what the open-source constrained-decoding community built.
 
