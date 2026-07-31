@@ -28,6 +28,7 @@ export const GET: APIRoute = async () => {
     "- [Now](https://tanchao.xyz/now/): Current focus areas",
     "- [Work / Hire me](https://tanchao.xyz/hire-me/): Professional background with structured data for recruiting bots",
     "- [Uses](https://tanchao.xyz/uses/): Tools and tech stack",
+    "- [Collections](https://tanchao.xyz/collections/): Curated endorsements — papers, specs, artifacts",
     "",
     "## Posts",
     "",
