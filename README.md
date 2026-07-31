@@ -1,6 +1,35 @@
 # tanchao.xyz
 
-Chao Tan's personal engineering blog. Built with [Astro 6](https://astro.build), [Tailwind CSS v4](https://tailwindcss.com), deployed on [Cloudflare Pages](https://pages.cloudflare.com).
+My personal engineering blog — and a quick way to get to know the person behind it. Live at **[tanchao.xyz](https://tanchao.xyz)**.
+
+Built with [Astro 6](https://astro.build), [Tailwind CSS v4](https://tailwindcss.com), deployed on [Cloudflare Pages](https://pages.cloudflare.com).
+
+## Who I am
+
+I'm **Chao Tan** (谭超) — call me Chao or `tc`. I've been building software since 2004, across four companies and three countries.
+
+- **Now** — data governance & privacy engineer at [Snowflake](https://snowflake.com). I built the data classification platform that discovers and tags sensitive data across customer accounts.
+- **Before** — six years at Amazon as a tech lead on Alexa's cloud platform: APIs at hundreds of millions of requests a day, a 14-person team, and the backend for Amazon's Astro robot built from scratch.
+- **Earlier** — eBay and HSBC. Three pending patents. Father of two. Art, food, basketball, swimming, skiing.
+
+What I care about: long-term value over short-term velocity, automation over process, first principles before tools, and `SDE = Somebody Do Everything` — own the outcome, not just the code.
+
+Fuller story on the [about page](https://tanchao.xyz/about/).
+
+### Find me
+
+| Where | Link |
+|---|---|
+| Site | [tanchao.xyz](https://tanchao.xyz) |
+| GitHub | [@tanchao](https://github.com/tanchao) |
+| Twitter/X | [@chaostan](https://twitter.com/chaostan) |
+| LinkedIn | [in/tanchao](https://www.linkedin.com/in/tanchao) |
+| Substack | [@sprtn](https://substack.com/@sprtn) |
+| Email | chaos.tc@gmail.com |
+
+## What I write about
+
+Data governance and privacy, AI system security, performance engineering, API design, and the engineering career — field notes from someone who has owned production systems at scale, not tutorials or vendor takes.
 
 ## Quick start
 
