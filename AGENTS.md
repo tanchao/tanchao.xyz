@@ -154,13 +154,29 @@ npm run dev          # Start dev server at http://localhost:4321
 npm run build        # Production build (also runs pagefind index)
 npm run preview      # Preview production build
 npm run check        # Astro type check + content schema validation
-npm run check:content # Fast Zod-only content validation (no build)
+npm run check:content # Fast Zod-only content validation + anti-AI-ism scan on changed posts (no build)
+npm run check:editorial # LLM judge: concise/focused, opinion, value — on changed published posts (needs `claude` CLI)
 npm run lint         # Biome lint
 npm run format       # Biome format (write)
 npm run new:post -- "My Title"     # Scaffold a new post file with today's date
 npm run new:project -- "My Project" # Scaffold a new project file
 npm run sync:substack               # Fetch Substack RSS and import new notes (manual only — run from a residential IP)
 ```
+
+## Content quality gates
+
+Two gates guard published posts:
+
+- **`check:content`** — deterministic, fast: Zod frontmatter validation plus an advisory anti-AI-ism scan (from `docs/voice.md` §6) on posts changed vs `origin/main`. Warnings never fail the run.
+- **`check:editorial`** — an LLM judge (via the local Claude Code CLI in print mode — auto-detects `claude` or `sf ai claude`; override with `CLAUDE_CLI`; uses your existing login, no API key) scoring changed published posts on concise/focused, opinion clarity, and reader value. Advisory by default; `-- --strict` exits non-zero on a `fail`.
+
+The editorial gate runs **automatically on `git push`** via a version-controlled `pre-push` hook (advisory — it warns, never blocks). Install it once per clone:
+
+```bash
+npm run hooks:install
+```
+
+This copies `scripts/hooks/pre-push` into `.git/hooks/` and leaves the existing pre-commit (secret-scanner) framework untouched — it does **not** set `core.hooksPath`. Skips cleanly where `claude` isn't installed (e.g. CI).
 
 ## How to add a post
 

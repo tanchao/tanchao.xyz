@@ -12,6 +12,8 @@
     "astro": "astro",
     "check": "astro check",
     "check:content": "npx tsx scripts/check-content.ts",
+    "check:editorial": "npx tsx scripts/check-editorial.ts",
+    "hooks:install": "cp scripts/hooks/pre-push \"$(git rev-parse --git-path hooks)/pre-push\" && chmod +x \"$(git rev-parse --git-path hooks)/pre-push\" && echo 'pre-push editorial hook installed'",
     "lint": "biome lint ./src ./scripts",
     "format": "biome format --write ./src ./scripts",
     "new:post": "npx tsx scripts/new-post.ts",

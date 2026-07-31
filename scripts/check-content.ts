@@ -4,9 +4,10 @@
  * Run: npm run check:content
  */
 
+import { execFileSync } from "node:child_process";
 import { z } from "zod";
 import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 const postSchema = z.object({
   title: z.string().max(80),
@@ -58,7 +59,10 @@ function parseFrontmatter(content: string): Record<string, unknown> {
   for (const line of match[1].split("\n")) {
     const [key, ...rest] = line.split(":");
     if (key && rest.length) {
-      let val: unknown = rest.join(":").trim().replace(/^["']|["']$/g, "");
+      let val: unknown = rest
+        .join(":")
+        .trim()
+        .replace(/^["']|["']$/g, "");
       if (val === "true") val = true;
       if (val === "false") val = false;
       if (typeof val === "string" && val.startsWith("[")) {
@@ -72,12 +76,62 @@ function parseFrontmatter(content: string): Record<string, unknown> {
   return fm;
 }
 
+// Anti-AI-isms from docs/voice.md §6 — deterministic, advisory (warnings only,
+// never fail the build). The LLM judge (`npm run check:editorial`) handles the
+// qualitative axes; this just flags the cheap, unambiguous tells.
+const BLACKLIST = [
+  "delve",
+  "tapestry",
+  "utilize",
+  "it's important to note that",
+  "in today's fast-paced world",
+  "unlock the power of",
+  "game-changer",
+  "at the end of the day",
+];
+
 let errors = 0;
+let warnings = 0;
+
+// Scope the prose scan to posts changed vs origin/main — the point is to catch
+// tells in new drafts, not relitigate pre-2025 posts (see docs/voice.md §3).
+function changedPostFiles(): string[] {
+  const run = (args: string[]) => {
+    try {
+      return execFileSync("git", args, { encoding: "utf-8" }).split("\n");
+    } catch {
+      return [];
+    }
+  };
+  const committed = run(["diff", "--name-only", "origin/main", "--", "src/content/posts"]);
+  const untracked = run(["ls-files", "--others", "--exclude-standard", "--", "src/content/posts"]);
+  const set = new Set(
+    [...committed, ...untracked].filter((f) => f.endsWith(".md") || f.endsWith(".mdx")),
+  );
+  return [...set].map((f) => join(process.cwd(), f));
+}
+
+function scanProse() {
+  for (const file of changedPostFiles()) {
+    let content: string;
+    try {
+      content = readFileSync(file, "utf-8");
+    } catch {
+      continue; // deleted or renamed
+    }
+    const body = content.replace(/^---\n[\s\S]*?\n---/, "").toLowerCase();
+    const hits = BLACKLIST.filter((term) => body.includes(term));
+    if (hits.length) {
+      console.warn(`⚠️  posts/${basename(file)}: possible anti-AI-isms — ${hits.join(", ")}`);
+      warnings += hits.length;
+    }
+  }
+}
 
 function checkDir(dir: string, schema: z.ZodObject<z.ZodRawShape>, label: string) {
   let files: string[];
   try {
-    files = readdirSync(dir).filter(f => f.endsWith(".md") || f.endsWith(".mdx"));
+    files = readdirSync(dir).filter((f) => f.endsWith(".md") || f.endsWith(".mdx"));
   } catch {
     return; // dir doesn't exist yet
   }
@@ -95,13 +149,35 @@ function checkDir(dir: string, schema: z.ZodObject<z.ZodRawShape>, label: string
   }
 }
 
-checkDir(join(process.cwd(), "src/content/posts"), postSchema as z.ZodObject<z.ZodRawShape>, "posts");
-checkDir(join(process.cwd(), "src/content/notes"), noteSchema as z.ZodObject<z.ZodRawShape>, "notes");
-checkDir(join(process.cwd(), "src/content/projects"), projectSchema as z.ZodObject<z.ZodRawShape>, "projects");
-checkDir(join(process.cwd(), "src/content/pulse"), pulseSchema as z.ZodObject<z.ZodRawShape>, "pulse");
+checkDir(
+  join(process.cwd(), "src/content/posts"),
+  postSchema as z.ZodObject<z.ZodRawShape>,
+  "posts",
+);
+checkDir(
+  join(process.cwd(), "src/content/notes"),
+  noteSchema as z.ZodObject<z.ZodRawShape>,
+  "notes",
+);
+checkDir(
+  join(process.cwd(), "src/content/projects"),
+  projectSchema as z.ZodObject<z.ZodRawShape>,
+  "projects",
+);
+checkDir(
+  join(process.cwd(), "src/content/pulse"),
+  pulseSchema as z.ZodObject<z.ZodRawShape>,
+  "pulse",
+);
+
+scanProse();
 
 if (errors === 0) {
-  console.log("✅ All content validated successfully.");
+  if (warnings > 0) {
+    console.log(`✅ All content validated (${warnings} prose warning(s) above — advisory).`);
+  } else {
+    console.log("✅ All content validated successfully.");
+  }
 } else {
   console.error(`\n${errors} file(s) failed validation.`);
   process.exit(1);
