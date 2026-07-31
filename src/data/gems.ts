@@ -1,16 +1,16 @@
 /**
- * Curated endorsements — URL + short why.
+ * GEMs — curated endorsements (URL + short why).
  * Add new items at the top. Keep descriptions to one short line.
  */
-export interface CollectionItem {
+export interface Gem {
   title: string;
   url: string;
   description: string;
-  /** Optional coarse grouping for the page */
+  /** Optional coarse grouping */
   tags?: string[];
 }
 
-export const collections: CollectionItem[] = [
+export const gems: Gem[] = [
   {
     title: "Steps of AI Adoption",
     url: "https://claude.ai/code/artifact/bfdfaef9-bc62-4dfe-ba9e-c58a26c9accf",

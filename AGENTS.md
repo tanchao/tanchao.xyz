@@ -37,7 +37,7 @@ src/
     about.astro     Bio page
     now.astro       /now page (nownownow.com convention)
     uses.astro      Tools and tech stack
-    collections.astro Curated link endorsements (data in src/data/collections.ts)
+    gems.astro      Curated link endorsements / GEMs (data in src/data/gems.ts)
     hire-me.astro   Career page with structured data for recruiting bots
     feedback.astro  Feedback form (pairs with functions/api/feedback.ts)
     404.astro       Not found
