@@ -17,25 +17,24 @@ function displayHost(url: string): string {
   title="GEMs"
   description="Links Chao Tan endorses — papers, specs, and artifacts worth keeping."
 >
-  <h1>GEMs</h1>
-  <p style="font-family:var(--font-sans);font-size:0.875rem;color:var(--text-muted);margin-bottom:1rem;">
+  <p style="font-family:var(--font-sans);font-size:0.875rem;color:var(--text-muted);margin:0 0 1rem;">
     Things I'd point someone at — not a reading diary.
   </p>
 
-  <table style="width:100%;border-collapse:collapse;font-family:var(--font-sans);font-size:0.9rem;">
+  <table style="width:100%;border-collapse:collapse;table-layout:fixed;font-family:var(--font-sans);font-size:0.9rem;">
     <thead>
       <tr style="border-bottom:1px solid var(--border);text-align:left;color:var(--text-muted);font-size:0.75rem;">
-        <th style="padding:0.4rem 0.75rem 0.4rem 0;font-weight:500;">What</th>
-        <th style="padding:0.4rem 0;font-weight:500;">Link</th>
+        <th style="padding:0.4rem 1rem 0.4rem 0;font-weight:500;width:45%;">What</th>
+        <th style="padding:0.4rem 0;font-weight:500;width:55%;">Link</th>
       </tr>
     </thead>
     <tbody>
       {gems.map((item) => (
         <tr style="border-bottom:1px solid var(--border);">
-          <td style="padding:0.5rem 0.75rem 0.5rem 0;vertical-align:middle;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:0;width:55%;" title={item.description}>
+          <td style="padding:0.5rem 1rem 0.5rem 0;vertical-align:middle;color:var(--text);" title={item.description}>
             {item.title}
           </td>
-          <td style="padding:0.5rem 0;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:0;width:45%;">
+          <td style="padding:0.5rem 0;vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
             <a
               href={item.url}
               target="_blank"
