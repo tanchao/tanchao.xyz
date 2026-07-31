@@ -168,7 +168,7 @@ npm run sync:substack               # Fetch Substack RSS and import new notes (m
 Two gates guard published posts:
 
 - **`check:content`** — deterministic, fast: Zod frontmatter validation plus an advisory anti-AI-ism scan (from `docs/voice.md` §6) on posts changed vs `origin/main`. Warnings never fail the run.
-- **`check:editorial`** — an LLM judge (via the local `claude` CLI, using your Claude Code login — no API key) scoring changed published posts on concise/focused, opinion clarity, and reader value. Advisory by default; `-- --strict` exits non-zero on a `fail`.
+- **`check:editorial`** — an LLM judge (via the local Claude Code CLI in print mode — auto-detects `claude` or `sf ai claude`; override with `CLAUDE_CLI`; uses your existing login, no API key) scoring changed published posts on concise/focused, opinion clarity, and reader value. Advisory by default; `-- --strict` exits non-zero on a `fail`.
 
 The editorial gate runs **automatically on `git push`** via a version-controlled `pre-push` hook (advisory — it warns, never blocks). Install it once per clone:
 

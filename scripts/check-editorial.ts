@@ -4,9 +4,10 @@
  * its opinion properly, and is valuable to the reader — the qualitative checks
  * the schema-only `check:content` gate can't make.
  *
- * Runs an LLM judge via the local `claude` CLI (reuses your Claude Code login,
- * no API key needed). Advisory by default; pass --strict to exit non-zero on a
- * `fail` verdict (used by nothing yet — the pre-push hook runs it advisory).
+ * Runs an LLM judge via the local Claude Code CLI in print mode — auto-detects
+ * `claude`, or `sf ai claude` on Snowflake machines (override with CLAUDE_CLI).
+ * Reuses your existing login; no API key. Advisory by default; pass --strict to
+ * exit non-zero on a `fail` verdict (the pre-push hook runs it advisory).
  *
  * Usage:
  *   npm run check:editorial                 # posts changed vs origin/main
@@ -79,33 +80,49 @@ function targets(): string[] {
   return changedPosts();
 }
 
-function judge(content: string): Verdict | null {
+// Resolve how to invoke Claude Code in print mode. A standard install exposes
+// `claude`; Snowflake dev machines wrap it as `sf ai claude`. Override both with
+// the CLAUDE_CLI env var (e.g. `CLAUDE_CLI="sf ai claude -m claude-opus-4-8"`).
+function resolveCli(): string[] | null {
+  const override = process.env.CLAUDE_CLI?.trim();
+  if (override) return override.split(/\s+/);
+  const has = (bin: string) => {
+    try {
+      execFileSync("which", [bin], { stdio: "ignore" });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  if (has("claude")) return ["claude"];
+  if (has("sf")) return ["sf", "ai", "claude"];
+  return null;
+}
+
+function judge(content: string, cli: string[]): Verdict | null {
   const prompt = `${RUBRIC}\n\n--- POST ---\n${content}`;
   let raw: string;
   try {
-    raw = execFileSync("claude", ["-p", prompt, "--output-format", "json"], {
+    // Print mode (-p) writes only the model's text to stdout; the rubric asks
+    // for JSON, so we parse stdout directly. stderr (banners) is discarded.
+    raw = execFileSync(cli[0], [...cli.slice(1), "-p", prompt], {
       encoding: "utf-8",
-      timeout: 180_000,
+      timeout: 300_000,
       maxBuffer: 10 * 1024 * 1024,
+      stdio: ["ignore", "pipe", "ignore"],
     });
-  } catch (e) {
-    const err = e as { code?: string };
-    if (err.code === "ENOENT") {
-      console.error(
-        "⚠️  `claude` CLI not found on PATH. Editorial gate needs Claude Code installed; skipping.",
-      );
-      process.exit(0);
-    }
-    console.error("⚠️  claude invocation failed; skipping this post.");
+  } catch {
+    console.error("⚠️  Claude invocation failed; skipping this post.");
+    return null;
+  }
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  if (start < 0 || end < 0) {
+    console.error("⚠️  No JSON found in judge output; skipping this post.");
     return null;
   }
   try {
-    const wrapper = JSON.parse(raw) as { result?: string };
-    const text = (wrapper.result ?? raw)
-      .trim()
-      .replace(/^```(?:json)?|```$/g, "")
-      .trim();
-    return JSON.parse(text) as Verdict;
+    return JSON.parse(raw.slice(start, end + 1)) as Verdict;
   } catch {
     console.error("⚠️  Could not parse judge output; skipping this post.");
     return null;
@@ -121,6 +138,14 @@ if (!files.length) {
   process.exit(0);
 }
 
+const cli = resolveCli();
+if (!cli) {
+  console.error(
+    "⚠️  No Claude CLI found (`claude` or `sf ai claude`); set CLAUDE_CLI to override. Skipping editorial gate.",
+  );
+  process.exit(0);
+}
+
 for (const file of files) {
   let content: string;
   try {
@@ -131,7 +156,7 @@ for (const file of files) {
   if (!isPublished(content)) continue;
 
   const rel = relative(process.cwd(), file);
-  const v = judge(content);
+  const v = judge(content, cli);
   if (!v) continue;
 
   console.log(`\n${icon[v.verdict]} ${rel}  —  ${v.verdict.toUpperCase()}`);

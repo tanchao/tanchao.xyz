@@ -5,14 +5,10 @@
 # leaving the pre-commit framework's own hooks untouched — no core.hooksPath).
 set -euo pipefail
 
-repo_root="$(git rev-parse --show-toplevel)"
-cd "$repo_root"
+cd "$(git rev-parse --show-toplevel)"
 
-# Skip cleanly if the judge's CLI isn't available (e.g. CI without Claude Code).
-if ! command -v claude >/dev/null 2>&1; then
-  exit 0
-fi
-
+# The gate auto-detects the Claude CLI (`claude` or `sf ai claude`) and
+# self-skips if none is found (CI, etc.). It never blocks the push.
 echo "→ Editorial gate (advisory) on changed posts…"
 npm run --silent check:editorial || true
 exit 0
