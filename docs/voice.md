@@ -32,6 +32,7 @@ TC is a staff-level software engineer and operator — Amazon, then Snowflake �
 - Close quietly. No "in conclusion," no grand unifying statement. End on the last real point, or an understated line, the way `2022-10-05-hello-snowflake.md` ends on a friend's quote and "I will get back to it after another Q or half year."
 - One concrete cross-domain analogy per substantial post, when one genuinely clarifies the point (see the analogy bank in Section 8) — don't force one where a direct explanation is clearer.
 - Pair a hard metric with a soft insight when you have both (a p90 number and what it felt like; a financial trade-off and what was learned). That pairing is a real recurring signature, not decoration.
+- Cut the drafting process out of the post. The reader wants the key info as efficiently as possible — don't narrate how the answer was found (name-guessing, "I couldn't place it," the research back-and-forth). A story or a personal scene earns its place only when it serves that core purpose (a concrete phenomenon the reader is trying to understand); if it's just churn from how the piece got written, delete it.
 
 ## 5. Do / don't
 
