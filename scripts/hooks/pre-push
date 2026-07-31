@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Advisory editorial gate: reviews published posts changed vs origin/main
+# before they go live. Never blocks the push — prints warnings only.
+# Install with: npm run hooks:install  (copies this into .git/hooks/pre-push,
+# leaving the pre-commit framework's own hooks untouched — no core.hooksPath).
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+# Skip cleanly if the judge's CLI isn't available (e.g. CI without Claude Code).
+if ! command -v claude >/dev/null 2>&1; then
+  exit 0
+fi
+
+echo "→ Editorial gate (advisory) on changed posts…"
+npm run --silent check:editorial || true
+exit 0
