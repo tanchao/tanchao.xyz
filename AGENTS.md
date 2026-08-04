@@ -123,6 +123,7 @@ Projects (`src/content/projects/`) frontmatter:
 ```yaml
 ---
 title: "Project Title"       # required, max 80 chars
+shortTitle: "Short Name"     # optional, max 30 chars — used as the tab label on /projects/
 description: "..."           # optional, for SEO and listing
 status: active               # optional, defaults to "active": active | paused | completed | archived
 started: 2026-05-06         # required, YYYY-MM-DD
