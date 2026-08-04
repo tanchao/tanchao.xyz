@@ -4,7 +4,7 @@ description: "Single-party agents already work: coding agents and personal runti
 tldr: "A multi-party agentic system spans roles, teams, and trust boundaries, so the binding constraint is governance, not model quality: bind every action to a delegated identity (OAuth token exchange, RFC 8693), gate every tool call through a policy engine (Cedar or OPA), verify cross-org provenance (the A2A trust drafts), and give every agent a named human owner with interrupt conditions and a tamper-evident audit trail (NIST AI RMF, EU AI Act Article 14). Multi-agent is not multi-party."
 date: 2026-08-03
 tags: ["ai", "agents", "governance", "security", "engineering"]
-draft: true
+draft: false
 faq:
   - q: "What is a multi-party agentic system?"
     a: "A system where agents and humans across different roles, teams, or organizations drive one shared process to completion, each a distinct party with its own authority and trust boundary. A pipeline where data science, engineering, product, an account team, and a customer each act through or alongside an agent is multi-party. The parties do not share a single owner or a single permission set."

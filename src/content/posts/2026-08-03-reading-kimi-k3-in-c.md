@@ -4,7 +4,7 @@ description: "A learning note from reading FareedKhan-dev/kimi-k3-in-c — a C99
 tldr: "kimi-k3-in-c fits a 1.56TB mixture-of-experts model into 8.24GB by keeping the always-on part resident and streaming the sleeping experts off NVMe. Reading it taught me three things I did not expect: you can multiply straight from 4-bit weights without ever dequantizing, an LRU cache can be strictly worse than pinning because the model's own training flattens expert usage, and allocation beats capacity — at a fixed memory budget, feeding the trunk instead of the cache was 1.69x faster."
 date: 2026-08-03
 tags: ["learning-notes", "ai", "llm", "performance", "engineering"]
-draft: true
+draft: false
 ---
 
 Notes to myself from reading [FareedKhan-dev/kimi-k3-in-c](https://github.com/FareedKhan-dev/kimi-k3-in-c).
