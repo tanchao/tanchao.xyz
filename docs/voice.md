@@ -26,6 +26,7 @@ TC is a staff-level software engineer and operator — Amazon, then Snowflake �
 
 - Prefer sentences under about 20 words. When a sentence runs long, check whether it is actually two ideas.
 - Lead a section with a claim, not a rhetorical flourish or a throat-clearing sentence.
+- Headers name the topic or the finding, not a narrative beat. `Policy as code, enforced at the tool call` is a header; `The trick I didn't expect` is a story. This is a hard rule for learning notes (Section 9), and good practice everywhere.
 - Default to bullets or numbered lists over long unbroken prose. TC's own posts are structurally a series of bullets and headings more often than a flowing essay.
 - Use first person to anchor perspective ("I learned," "I chose"), not to sell credentials. Third person or "we" is fine for team/shared work.
 - Open plainly: a direct claim, a short scene, or a quoted principle — not a windup sentence that could be deleted with no loss.
@@ -93,6 +94,7 @@ Quoted verbatim as evidence of TC's cadence and stance — per the fidelity rule
 ## 9. Register cards
 
 - **Pillar post** (`src/content/posts/`): full GEO structure — answer capsule, atomic H2s, `tldr`, 5-7 `faq` items, one citation per ~150-200 words — with the voice from Sections 4-8 carrying the prose. This is the primary register this guide targets.
+- **Learning note** (`src/content/posts/` with the `learning-notes` tag): a concise personal record of something TC read or dug into, not a teaching piece. Distinct from a pillar post in three ways. (1) Density: note-cadence, fragments allowed ("Not caching inefficiently. Not caching at all."); record the valuable facts and numbers and cut setup, hedges, and narration. (2) Headers: plain topic-or-finding labels only — never storytelling headers. `MXFP4: multiply without dequantizing` and `Expert cache: allocation beats capacity` are headers; `The trick I didn't expect` and `The bug that doesn't crash` are stories, so rename them. (3) Structure: keep `description`, `tldr`, a closing **Key takeaways** list, and primary-source links; drop the `faq` block and the answer-capsule polish. The stance is TC learning in public, first person, not TC explaining to beginners. Reference example: `2026-08-03-reading-kimi-k3-in-c.md`.
 - **Note** (`src/content/notes/`): short, one insight per note, no headers, blank-line stanzas if it runs past a sentence or two. Hand-written notes only — never invent content for syndicated Substack notes (`source: substack`).
 - **Project update** (`src/content/projects/`): dated `## YYYY-MM-DD` entries, factual and terse, metric-plus-outcome pairing where there's a number to report.
 - English is the default for technical posts. Chinese phrases are fine only where they add real cultural or personal context, matching how TC already code-switches in notes — not as decoration.
