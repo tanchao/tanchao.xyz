@@ -1,5 +1,6 @@
 ---
 title: "Customize OpenAI privacy-filter for Snowflake semantic_categories"
+shortTitle: "PrivacyFilter"
 description: "Fine-tune OpenAI's privacy-filter model on Snowflake's semantic_categories taxonomy, then evaluate against a hand-labeled holdout."
 status: active
 started: 2026-04-23

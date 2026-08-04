@@ -160,15 +160,17 @@ const faqSchema = {
       <li>Staff / Principal / Architect-level scope</li>
     </ul>
 
-    <h2>FAQ</h2>
-    <dl style="margin:0;">
-      {faq.map(({ q, a }) => (
-        <>
-          <dt style="font-family:var(--font-sans);font-weight:600;margin:1rem 0 0.25rem;">{q}</dt>
-          <dd style="margin:0 0 0.5rem;color:var(--text-muted);">{a}</dd>
-        </>
-      ))}
-    </dl>
+    <details>
+      <summary style="font-family:var(--font-sans);font-weight:600;font-size:1.5rem;color:var(--text);margin-top:2rem;cursor:pointer;">FAQ</summary>
+      <dl style="margin:0.75rem 0 0;">
+        {faq.map(({ q, a }) => (
+          <>
+            <dt style="font-family:var(--font-sans);font-weight:600;margin:1rem 0 0.25rem;">{q}</dt>
+            <dd style="margin:0 0 0.5rem;color:var(--text-muted);">{a}</dd>
+          </>
+        ))}
+      </dl>
+    </details>
 
     <h2>Contact</h2>
     <p>

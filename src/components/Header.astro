@@ -3,15 +3,22 @@ import ThemeToggle from "./ThemeToggle.astro";
 
 const navLinks = [
   { href: "/posts/", label: "Posts" },
-  { href: "/pulse/", label: "AI Pulse" },
   { href: "/projects/", label: "Projects" },
-  { href: "/notes/", label: "Notes" },
-  { href: "/gems/", label: "GEMs" },
   { href: "/about/", label: "About" },
-  { href: "/hire-me/", label: "Work" },
 ];
 
+// Pages nested inside Projects/About (no top-level nav item of their own)
+// still highlight their parent when visited.
+const parentOf: Record<string, string> = {
+  "/pulse/": "/projects/",
+  "/notes/": "/about/",
+  "/gems/": "/about/",
+  "/hire-me/": "/about/",
+};
+
 const current = Astro.url.pathname;
+const effectivePath =
+  Object.entries(parentOf).find(([prefix]) => current.startsWith(prefix))?.[1] ?? current;
 ---
 
 <header style="border-bottom:1px solid var(--border);padding:0.75rem 0;margin-bottom:2.5rem;">
@@ -24,7 +31,8 @@ const current = Astro.url.pathname;
     </a>
     <nav aria-label="Main navigation" style="display:flex;align-items:center;gap:0.25rem;flex-wrap:wrap;">
       {navLinks.map(({ href, label }) => {
-        const isActive = current === href || current.startsWith(href) && href !== "/";
+        const isActive =
+          effectivePath === href || (effectivePath.startsWith(href) && href !== "/");
         return (
           <a
             href={href}

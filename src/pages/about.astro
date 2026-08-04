@@ -188,14 +188,37 @@ const faqSchema = {
       <a href="https://twitter.com/chaostan" rel="noopener">Twitter @chaostan</a>
     </p>
 
-    <h2>FAQ</h2>
-    <dl style="margin:0;">
-      {faq.map(({ q, a }) => (
-        <>
-          <dt style="font-family:var(--font-sans);font-weight:600;margin:1rem 0 0.25rem;">{q}</dt>
-          <dd style="margin:0 0 0.5rem;color:var(--text-muted);">{a}</dd>
-        </>
+    <h2>Elsewhere</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:0.75rem;margin-bottom:1.5rem;">
+      {[
+        { href: "/hire-me/", title: "Work", description: "Consulting and advisory — how I can help." },
+        { href: "/gems/", title: "GEMs", description: "Curated endorsements — papers, specs, artifacts." },
+        { href: "/notes/", title: "Notes", description: "Short notes and quick thoughts." },
+      ].map(({ href, title, description }) => (
+        <a
+          href={href}
+          style="flex:1 1 12rem;display:block;padding:0.875rem 1rem;border:1px solid var(--border);border-radius:8px;background:var(--bg-alt);text-decoration:none;"
+        >
+          <span style="display:block;font-family:var(--font-sans);font-size:0.95rem;font-weight:600;margin-bottom:0.25rem;">
+            {title}
+          </span>
+          <span style="display:block;font-family:var(--font-sans);font-size:0.85rem;color:var(--text-muted);">
+            {description}
+          </span>
+        </a>
       ))}
-    </dl>
+    </div>
+
+    <details>
+      <summary style="font-family:var(--font-sans);font-weight:600;font-size:1.5rem;color:var(--text);margin-top:2rem;cursor:pointer;">FAQ</summary>
+      <dl style="margin:0.75rem 0 0;">
+        {faq.map(({ q, a }) => (
+          <>
+            <dt style="font-family:var(--font-sans);font-weight:600;margin:1rem 0 0.25rem;">{q}</dt>
+            <dd style="margin:0 0 0.5rem;color:var(--text-muted);">{a}</dd>
+          </>
+        ))}
+      </dl>
+    </details>
   </div>
 </Base>
