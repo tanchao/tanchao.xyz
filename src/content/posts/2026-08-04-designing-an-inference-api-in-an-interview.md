@@ -4,7 +4,7 @@ description: "A 45-minute interview script for designing an LLM inference API, w
 tldr: "Designing an inference API in an interview comes down to one claim: the objective function is goodput under a latency SLO, not tokens per second. Everything else follows from arithmetic — KV cache per token sets your batch size, decode is memory-bandwidth-bound while prefill is compute-bound, so the two phases belong on different GPU pools. Spend the first five minutes on the traffic shape, the next ten on the capacity math, and the rest on routing, cache tiers, and priority classes."
 date: 2026-08-04
 tags: ["ai", "llm", "inference", "system-design", "interview", "performance", "engineering"]
-draft: true
+draft: false
 faq:
   - q: "What is the objective function when designing an inference API?"
     a: "Goodput, not throughput. The DistServe paper defines it as the maximum request rate servable while staying within both the time-to-first-token and time-per-output-token constraints. Throughput alone can be inflated by batching until every individual stream is unusably slow, which is why it is the wrong target. State the SLO first, then maximize rate subject to it."

@@ -4,7 +4,7 @@ description: "A learning note from the Latent Space inference engineering episod
 tldr: "Inference optimizations are relative to the hardware, the engine, and the traffic — not properties of the technique. TurboQuant is good on a laptop and bad on a B200 at 8 TB/s, quantizing more layers can raise quality when errors cancel, and hand-fused mega-kernels usually lose to modular kernels that each get optimized separately."
 date: 2026-08-04
 tags: ["learning-notes", "ai", "llm", "inference", "performance", "engineering"]
-draft: true
+draft: false
 ---
 
 > Companion to [How I would design an LLM inference API in a system design interview](/posts/2026/08/04/designing-an-inference-api-in-an-interview/), which works the capacity math. This one is the architecture and the trade-offs.
