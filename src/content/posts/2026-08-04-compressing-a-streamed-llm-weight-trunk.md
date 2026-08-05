@@ -19,7 +19,7 @@ faq:
     a: "No. A raw manifest has no codec key, so old files load unchanged. A binary built without zstd that is handed a compressed trunk prints why and stops rather than reading the wrong bytes."
 date: 2026-08-04
 tags: ["ai", "llm", "performance", "engineering", "inference", "storage"]
-draft: false
+draft: true
 ---
 
 Byte-splitting bf16 weights before compressing them takes a streamed 108.81 GB model trunk down to 74.6 GB, bit for bit identical. The gain comes from separating two planes with very different entropy. In a bf16 weight the exponent byte carries about 2.7 bits of information and the mantissa byte carries 7.97 of a possible 8. Interleaved, the compressible half is diluted by the incompressible one.
