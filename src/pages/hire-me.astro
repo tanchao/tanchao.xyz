@@ -39,9 +39,9 @@ const workSchema = {
   workExperience: [
     {
       "@type": "OrganizationRole",
-      roleName: "Data Governance & Privacy Engineer",
+      roleName: "Staff Engineer, Data Governance & Privacy",
       memberOf: { "@type": "Organization", name: "Snowflake" },
-      startDate: "2022-09",
+      startDate: "2022-08",
     },
     {
       "@type": "OrganizationRole",
@@ -64,15 +64,15 @@ const faq = [
   },
   {
     q: "What is Chao Tan's experience level?",
-    a: "18 years building and securing large-scale systems across four companies and three countries. Currently at Snowflake (since 2022) after six years as a Senior SDE and Tech Lead on Amazon Alexa's cloud platform, four years on HSBC Global Markets Technology, and one year as a release engineer at eBay.",
+    a: "18 years building and securing large-scale systems across four companies and three countries. Currently at Snowflake (since 2022) after six years as a Senior SDE and Tech Lead on Amazon Alexa's cloud platform, four years on HSBC Global Markets Technology, and four and a half years as a software engineer at eBay.",
   },
   {
     q: "What is Chao Tan's most relevant accomplishment for a data governance role?",
-    a: "He built Snowflake's data classification platform — the system that automatically discovers and tags sensitive data across Snowflake's cloud — and delivered a 10x performance improvement on the core classification function (p90 latency from 80s to 10s) by innovating on Snowflake's UDTF parallel scan architecture.",
+    a: "He built Snowflake's data classification platform — the system that automatically discovers and tags sensitive data across Snowflake's cloud — and rebuilt its core classification engine for 10x lower latency (p90 from 80s to 10s) and 1000x higher throughput by innovating on Snowflake's UDTF parallel scan architecture. More recently he authored the Cortex Code data governance skill, which shipped to GA as one of the platform's three most-used skills.",
   },
   {
     q: "What is Chao Tan's most relevant leadership accomplishment?",
-    a: "At Amazon Alexa, he led a 14-person engineering team that decoupled THE Alexa cloud service into three fundamental platform services, impacting 10,000+ internal developers. He also built A2GS, the backend for Amazon's Astro robot, from scratch — a Tier-1 service running at 100k+ TPS at millisecond latency.",
+    a: "At Amazon Alexa, he was tech lead for a 50+ engineer organization and one of roughly 50 Alexa Call Leaders (on-call incident commanders) across a 20,000-engineer org. He led the 14-person project team that split THE Alexa monolith into three platform services, unblocking ~5,000 internal developers, and built the Alexa Application Gateway Service (A2GS) from scratch — a Tier-0 service at 100K average and 180K peak TPS under a 50ms p90 budget, at 99.9975% availability for two years, which also became the backend for Amazon's Astro robot.",
   },
   {
     q: "Where is Chao Tan based?",
@@ -101,7 +101,7 @@ const faqSchema = {
 
   <div class="prose">
     <p>
-      <strong>Chao Tan</strong> is a data governance and privacy engineer at Snowflake with 18 years of production engineering experience. He built Snowflake's data classification platform, delivered a 10x performance improvement on its core classification function, and previously led a 14-person team on Amazon Alexa's cloud platform. Selectively open to Staff, Principal, or Architect-level roles in data governance, AI governance, privacy, or security.
+      <strong>Chao Tan</strong> is a data governance and privacy engineer at Snowflake with 18 years of production engineering experience. He built Snowflake's data classification platform, authored the Cortex Code data governance skill that shipped to GA as one of the platform's three most-used skills, and previously was tech lead for a 50+ engineer organization on Amazon Alexa's cloud platform. Selectively open to Staff, Principal, or Architect-level roles in data governance, AI governance, privacy, or security.
     </p>
 
     <p>
@@ -112,17 +112,19 @@ const faqSchema = {
     <ul>
       <li><strong>Data governance &amp; privacy</strong> — classification, tagging, sensitive data discovery, compliance automation at cloud scale</li>
       <li><strong>AI system governance</strong> — securing and governing data pipelines, model training data provenance, access control for AI workloads</li>
-      <li><strong>Performance engineering</strong> — 10x production improvements, p50/p90 compression, architecture-level optimization</li>
-      <li><strong>Platform &amp; API engineering</strong> — Tier-1 services at 100k+ TPS, developer platform ownership, API design at scale</li>
+      <li><strong>Performance engineering</strong> — 10x latency and 1000x throughput improvements in production, p50/p90 compression, architecture-level optimization</li>
+      <li><strong>Platform &amp; API engineering</strong> — Tier-0 services at 180K peak TPS, developer platform ownership, API design at scale</li>
     </ul>
 
     <h2>Experience</h2>
 
-    <h3>Snowflake <span style="font-weight:400;color:var(--text-muted);font-size:0.9em;">Sep 2022 – present</span></h3>
-    <p>Data Governance &amp; Privacy Engineer</p>
+    <h3>Snowflake <span style="font-weight:400;color:var(--text-muted);font-size:0.9em;">Aug 2022 – present</span></h3>
+    <p>Staff Engineer — Data Governance &amp; Privacy</p>
     <ul>
+      <li>Authored the Cortex Code data governance skill — shipped to GA as one of the platform's three most-used skills; translates plain English into row-access and masking policy, constrained by the caller's existing Horizon Catalog grants</li>
+      <li>Built Harbor, the evaluation framework that gates every Cortex Code skill release</li>
       <li>Built the data classification platform that automatically discovers and tags sensitive data across Snowflake's cloud</li>
-      <li>10x performance improvement on core classification function — reduced p90 latency from 80s → 10s, compressed p50/p90 delta ratio from 1x to 0.4x</li>
+      <li>Rebuilt the core classification engine for 10x lower latency (p90 80s → 10s, p50/p90 delta ratio 1x → 0.4x) and 1000x higher throughput</li>
       <li>Innovated on Snowflake UDTF parallel scan architecture to eliminate per-column linear latency growth</li>
       <li>Designed automatic tag propagation engine with algorithms for performance and eventual consistency</li>
     </ul>
@@ -130,22 +132,22 @@ const faqSchema = {
     <h3>Amazon <span style="font-weight:400;color:var(--text-muted);font-size:0.9em;">2016 – 2022</span></h3>
     <p>Senior SDE / Tech Lead — Alexa Cloud Platform Services</p>
     <ul>
-      <li>Led 14-person engineering team decoupling THE Alexa cloud service into three fundamental platform services, impacting 10,000+ internal developers</li>
-      <li>Built A2GS (backend for Amazon Astro robot) from scratch; operated Tier-1 service at 100k+ TPS with millisecond latency</li>
-      <li>Led universal application contract design reviewed and signed off by L10 Principal engineer</li>
+      <li>Tech lead for a 50+ engineer organization; led the 14-person project team that split THE Alexa monolith into three platform services, unblocking ~5,000 internal developers</li>
+      <li>Built the Alexa Application Gateway Service (A2GS) from scratch — also the backend for Amazon's Astro robot; operated it as a Tier-0 service at 100K average and 180K peak TPS under a 50ms p90 budget, at 99.9975% availability for two years</li>
+      <li>Led universal application contract design, reviewed and signed off by Alexa's Distinguished Engineer</li>
       <li>Subject matter expert in Alexa Skills Kit security and event flow architecture</li>
     </ul>
 
     <h3>HSBC <span style="font-weight:400;color:var(--text-muted);font-size:0.9em;">2012 – 2016</span></h3>
     <p>Senior Software Engineer — Global Markets Technology</p>
     <ul>
-      <li>Founded MESA environment management platform; reduced env initialization from 2 days → 2 hours</li>
+      <li>Founded the Automated Murex Management Platform (MESA); reduced environment initialization from 2 days → 2 hours</li>
       <li>Automated full regression testing from 2-week human task to daily automated job</li>
       <li>Expanded platform to North America region; reduced middle office support tickets by 80% via self-service tooling</li>
     </ul>
 
-    <h3>eBay <span style="font-weight:400;color:var(--text-muted);font-size:0.9em;">2011 – 2012</span></h3>
-    <p>Release Engineer</p>
+    <h3>eBay <span style="font-weight:400;color:var(--text-muted);font-size:0.9em;">2007 – 2012</span></h3>
+    <p>Software Engineer</p>
 
     <h2>Education</h2>
     <p>
