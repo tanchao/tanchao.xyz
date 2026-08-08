@@ -22,7 +22,7 @@ faq:
     a: "Cognitive debt (a term from Margaret Storey, amplified by Simon Willison) is the gap between the code your team ships and the code your team actually understands — a gap that widens because agents generate code far faster than humans can read it. Verification loops help by keeping mechanical correctness off your review plate, so your scarce attention goes to intent and architecture rather than line-by-line reading. They preserve review capacity; they do not replace it."
 ---
 
-> Part of a two-post series on structuring agentic systems. Previous: [Skills vs. subagents: when to use each in coding agents](/posts/2026/07/27/skills-vs-subagents-when-to-use-each/).
+> Part of a series on structuring agentic systems. Previous: [Skills vs. subagents: when to use each in coding agents](/posts/2026/07/27/skills-vs-subagents-when-to-use-each/). Next: [The orchestrator is blind on purpose](/posts/2026/08/07/the-orchestrator-is-blind-on-purpose/).
 
 How many coding agents you can run at once is capped by one thing: how much you trust your verification loop. Boris Cherny's AI-adoption ladder climbs from one supervised agent to a thousand autonomous ones, and every rung is gated by verification. Anthropic just published how to build that loop as skills. The rule the accountable engineers add, and the vendor framing underplays: the gate has to be external and able to fail, or the trust is fake.
 
