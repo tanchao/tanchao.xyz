@@ -4,7 +4,7 @@ description: "In an orchestrated Claude Code session the lead agent sees only it
 tldr: "An orchestrating agent is blind by design: each subagent runs in its own context window and only its final message returns, which is what keeps the parent's context clean enough to stay responsive. The harness sees everything the parent cannot: full subagent transcripts on disk, agent-lifecycle hooks, concurrency caps of 20 running and 200 per session. So orchestration control belongs in the harness, not in the orchestrator's instructions."
 date: 2026-08-07
 tags: ["ai", "agents", "claude-code", "orchestration", "context-engineering", "engineering"]
-draft: true
+draft: false
 faq:
   - q: "Does a subagent share context with the main agent?"
     a: "No. Claude Code's docs state that each subagent 'starts with a fresh, isolated context window' and 'doesn't see your conversation history, the skills you've already invoked, or the files Claude has already read.' Only its final message returns to the parent. The one exception is a fork, created with /subtask, which inherits the whole conversation and, in the docs' words, 'drops the input isolation that subagents otherwise provide.'"
