@@ -172,6 +172,92 @@ checkDir(
 
 scanProse();
 
+// Internal link check. A published post linking to a draft or missing page ships
+// a 404 into the live site, RSS, and llms-full.txt. Only published entries are
+// scanned, and only published targets count as resolvable: a draft linking to a
+// draft is fine, since neither is built.
+const COLLECTION_DIRS = ["posts", "notes", "projects", "pulse"] as const;
+
+function entryUrl(collection: string, file: string): string {
+  const slug = file.replace(/\.mdx?$/, "");
+  if (collection === "posts") {
+    const m = slug.match(/^(\d{4})-(\d{2})-(\d{2})-(.+)$/);
+    if (m) return `/posts/${m[1]}/${m[2]}/${m[3]}/${m[4]}/`;
+  }
+  return `/${collection}/${slug}/`;
+}
+
+/** Routes from src/pages, so new pages register themselves without edits here. */
+function staticRoutes(): Set<string> {
+  const routes = new Set<string>();
+  const walk = (dir: string, prefix: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        walk(join(dir, entry.name), `${prefix}${entry.name}/`);
+        continue;
+      }
+      if (!entry.name.endsWith(".astro") || entry.name.includes("[")) continue;
+      routes.add(
+        entry.name === "index.astro" ? prefix : `${prefix}${entry.name.replace(/\.astro$/, "")}/`,
+      );
+    }
+  };
+  walk(join(process.cwd(), "src/pages"), "/");
+  return routes;
+}
+
+function checkInternalLinks() {
+  const published: { collection: string; file: string; body: string; url: string }[] = [];
+  const valid = staticRoutes();
+
+  for (const collection of COLLECTION_DIRS) {
+    const dir = join(process.cwd(), "src/content", collection);
+    let files: string[];
+    try {
+      files = readdirSync(dir).filter((f) => f.endsWith(".md") || f.endsWith(".mdx"));
+    } catch {
+      continue;
+    }
+    for (const file of files) {
+      const content = readFileSync(join(dir, file), "utf-8");
+      const fm = parseFrontmatter(content);
+      if (fm.draft === true) continue;
+      const url = entryUrl(collection, file);
+      valid.add(url);
+      for (const tag of Array.isArray(fm.tags) ? fm.tags : []) {
+        valid.add(`/tags/${String(tag).toLowerCase()}/`);
+      }
+      published.push({
+        collection,
+        file,
+        url,
+        body: content.replace(/^---\n[\s\S]*?\n---/, ""),
+      });
+    }
+  }
+
+  for (const entry of published) {
+    const found = new Set<string>();
+    for (const re of [/\]\((\/[^)\s"]*)\)/g, /href="(\/[^"]*)"/g]) {
+      for (const m of entry.body.matchAll(re)) found.add(m[1]);
+    }
+    for (const raw of found) {
+      const path = raw.split("#")[0].split("?")[0];
+      if (!path || path === "/") continue;
+      // Files (assets, generated endpoints) are served as-is, not as routes.
+      if (/\.[a-z0-9]+$/i.test(path)) continue;
+      const normalized = path.endsWith("/") ? path : `${path}/`;
+      if (valid.has(normalized)) continue;
+      console.error(
+        `❌ ${entry.collection}/${entry.file}: internal link does not resolve to a published page — ${raw}`,
+      );
+      errors++;
+    }
+  }
+}
+
+checkInternalLinks();
+
 if (errors === 0) {
   if (warnings > 0) {
     console.log(`✅ All content validated (${warnings} prose warning(s) above — advisory).`);
