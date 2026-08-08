@@ -20,6 +20,8 @@ faq:
     a: "Dependency control. Claude Code reached a $1 billion run-rate in six months and ships as a compiled Bun binary, so a Bun regression is effectively a Claude Code outage. Owning the runtime lets Anthropic align the roadmap and de-risk that dependency. Bun stays open-source and MIT-licensed."
 ---
 
+> Part of a two-post series on the interfaces coding agents read. Next: [Why coding agents would rather not look](/posts/2026/08/03/why-coding-agents-would-rather-not-look/).
+
 Coding agents lean on the shell because it is the one universal interface to a computer: a single `bash` tool hands a model file access, process control, and every installed program at once. Idioms like `chmod +x ./foo && ./foo 2>/dev/null &` read as noise until you notice that each token buys something concrete: atomicity, a quieter context window, or a run that does not block.
 
 This post reads the idioms, explains the constraint that shapes them, and follows the trend to where it is heading: work moving out of ad-hoc shell into structured tools, and the frontier labs buying the toolchain underneath.
