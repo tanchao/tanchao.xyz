@@ -33,9 +33,11 @@ The [skills-versus-subagents post](/posts/2026/07/27/skills-vs-subagents-when-to
 Claude Code's capability changed shape four times in eighteen months, and the order matters more than the labels. It ran commands, then it planned before running them, then it spawned other agents, then a workflow layer appeared on top to schedule them. The dates come from the [public changelog](https://raw.githubusercontent.com/anthropics/claude-code/main/CHANGELOG.md), cross-checked against npm publish timestamps.
 
 - **Execution** — [February 24, 2025](https://www.anthropic.com/news/claude-3-7-sonnet), shipped as a limited research preview alongside Claude 3.7 Sonnet.
-- **Plan before execution** — no changelog entry announces Plan Mode. The earliest mention is an *improvement* line in v1.0.33 on June 23, 2025, so it predates that. I cannot date it precisely, and I would rather say so than pick a day.
+- **Plan before execution** — undated. No changelog entry announces Plan Mode; the earliest mention is an *improvement* line in v1.0.33 on June 23, 2025, so it predates that.
 - **Delegation** — [hooks](https://code.claude.com/docs/en/hooks) on June 30, 2025 (v1.0.38), then custom subagents on July 24, 2025 (v1.0.60): "You can now create custom subagents for specialized tasks." [Agent Skills](https://claude.com/blog/skills) followed on October 16, 2025, and background agents on December 5, 2025: "Agents run in the background while you work."
 - **Orchestration** — agent teams as a research preview on February 5, 2026 (v2.1.32), then dynamic workflows on May 28, 2026 (v2.1.154): "ask Claude to create a workflow and it orchestrates work across tens to hundreds of agents in the background."
+
+Teams came before dynamic workflows, not after. The primitive shipped first and the scheduling layer arrived three months later, which is the normal order for infrastructure and the opposite of how the progression feels from the outside. The simplification came third: on June 15, 2026, v2.1.178 "removed the TeamCreate and TeamDelete tools," and "every session now has one implicit team."
 
 The components barely change. What changes is who talks to whom, and how much of the conversation each participant can see.
 
@@ -70,8 +72,6 @@ flowchart TB
 ```
 
 Note the arrows in the last two rows. The thick one carries everything the teammate will ever know. The dotted one carries everything that comes back.
-
-Note the sequence inside that last bullet. Teams came before dynamic workflows, not after. The primitive shipped first and the scheduling layer arrived three months later, which is the normal order for infrastructure and the opposite of how the progression feels from the outside. The simplification came third: on June 15, 2026, v2.1.178 "removed the TeamCreate and TeamDelete tools," and "every session now has one implicit team."
 
 ## What crosses the boundary
 
@@ -113,7 +113,7 @@ That last mechanism is the one to internalize. If you want a teammate to stop cl
 
 Permission mode `auto` shows the same division of labor from the security side, and it is the clearest statement of the whole idea. Per the [permission modes docs](https://code.claude.com/docs/en/permission-modes), the harness evaluates the delegated task description *before* a subagent starts, so "a dangerous-looking task is blocked at spawn time." While it runs, "each of its actions goes through the classifier with the same rules as the parent session, and any `permissionMode` in the subagent's frontmatter is ignored." When it finishes, "the classifier reviews its full action history," and a flagged concern gets "a security warning prepended to the subagent's results."
 
-Read that sequence twice. The subagent's own declared configuration is overridden by the runtime, and the action history the orchestrator never sees is exactly what gets reviewed on the way out. The lead reads the report; the classifier reads every action. Note what the classifier is *not* handed, though: it is [denied tool outputs and the agent's own reasoning](/posts/2026/08/06/sizing-the-guard-model/), which is what makes it hard to steer with a poisoned file.
+The subagent's own declared configuration is overridden by the runtime, and the action history the orchestrator never sees is exactly what gets reviewed on the way out. The lead reads the report; the classifier reads every action. Note what the classifier is *not* handed, though: it is [denied tool outputs and the agent's own reasoning](/posts/2026/08/06/sizing-the-guard-model/), which is what makes it hard to steer with a poisoned file.
 
 ## Coordination moved from polling to a mailbox
 
@@ -143,7 +143,7 @@ flowchart TB
 
 The difference that matters is the bottom-left arrow in each box. Generation one recovers from a stuck worker by killing it. Generation two sends it a sentence.
 
-Worth checking your own tooling against that second bullet. My orchestration skill predates the mailbox entirely: it coordinates through queue state and, when a teammate is stuck, kills and respawns it. That worked, and it is now the slow path. If your multi-agent setup only knows how to spawn and wait, it was written against the older harness.
+My own orchestration skill predates the mailbox entirely: it coordinates through queue state and, when a teammate is stuck, kills and respawns it. That worked, and it is now the slow path. If your multi-agent setup only knows how to spawn and wait, it was written against the older harness.
 
 ## Why the lead stays responsive
 
