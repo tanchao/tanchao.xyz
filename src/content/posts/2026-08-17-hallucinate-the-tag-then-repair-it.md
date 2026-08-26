@@ -4,7 +4,7 @@ description: "Doug Turnbull's trick invents a label, then maps it to your real v
 tldr: "Ask a cheap model to invent a category, embed the invention, snap it to the nearest real category. On my 34 tagged posts against my own 51-tag vocabulary it scored 70.6% top-1 versus 64.7% for just embedding the post and 58.8% for always guessing 'engineering' — but on a paired test none of those gaps is distinguishable. On the specific tags that carry information, shipping the whole vocabulary to the model beat the trick 10 disagreements to 1 (p=0.012), and the trick tied the arm with no LLM in it at all (p=1.0). At this vocabulary size, send the vocabulary."
 date: 2026-08-17
 tags: ["ai", "llm", "engineering", "embeddings", "classification", "evals"]
-draft: true
+draft: false
 faq:
   - q: "What is hallucinate-then-map classification?"
     a: "You ask an LLM to invent a plausible category for an item without showing it your real category list, embed the invented string, and return the nearest real category by vector similarity. The invented label is thrown away; only its position in embedding space is used."
@@ -135,7 +135,7 @@ The failures are more instructive than the score. Three from my run:
 
 When the invention is vague, the nearest-neighbour step still returns something, with no signal that it is guessing. `best-practices` is not a topic, so its embedding lands wherever the vocabulary happens to be dense, and `compliance` comes back looking exactly as confident as a correct answer. Mean top-1 cosine across my posts was 0.426 and the minimum was 0.264. There is no natural cutoff anywhere in that range, and Turnbull's post never mentions one.
 
-This is the part I would not ship without a gate. I wrote in a note recently that I cannot hand my final gates to a black box, and this is the concrete version of that: constrained decoding fails loudly by refusing to emit an illegal token, while embedding repair fails silently by emitting a legal one. Both keep you inside the vocabulary. Only one tells you when it had no idea.
+This is the part I would not ship without a gate. I wrote in [a note recently](/notes/substack-c-310673310/) that I cannot hand my final gates to a black box, and this is the concrete version of that: constrained decoding fails loudly by refusing to emit an illegal token, while embedding repair fails silently by emitting a legal one. Both keep you inside the vocabulary. Only one tells you when it had no idea.
 
 Only 2 of 34 invented tags were already legal strings, so the repair step is doing nearly all the work of landing in the vocabulary.
 
