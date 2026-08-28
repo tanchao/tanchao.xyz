@@ -1,0 +1,17 @@
+---
+/**
+ * One panel inside <Tabs>. Every panel is rendered into the HTML so search
+ * indexing and no-JS readers get the full content; Tabs.astro hides the
+ * inactive ones at runtime.
+ */
+interface Props {
+  label: string;
+}
+
+const { label } = Astro.props;
+---
+
+<section class="tab-panel" data-tab-label={label}>
+  <p class="tab-panel-heading">{label}</p>
+  <slot />
+</section>
