@@ -1,0 +1,499 @@
+---
+title: "There is no golden-standard policy language"
+description: "OPA/Rego, Cedar, CEL, Kyverno, OpenFGA and AuthZEN as of August 2026: the same rule written in six languages, which layers have settled, and the one choice still worth arguing about."
+tldr: "Policy as code is a five-layer stack, and four layers settled: AuthZEN 1.0 for the wire, CEL for conditions, the Zanzibar model for relationships, in-tree CEL for Kubernetes admission. Only application authorization is still a real choice, and it comes down to Cedar if you want proofs or Rego if you want reach."
+date: 2026-08-27
+tags: ["policy", "authorization", "governance", "opa", "cedar", "kubernetes"]
+draft: false
+faq:
+  - q: "Is there a standard policy language in 2026?"
+    a: "No. Rego, Cedar, CEL and the OpenFGA DSL occupy different layers of the same stack rather than competing for one slot. What did standardize is the interface between them: the OpenID Foundation approved the AuthZEN Authorization API 1.0 as a Final Specification on 12 January 2026."
+  - q: "What is the AuthZEN Authorization API?"
+    a: "A JSON-over-HTTPS protocol between a Policy Enforcement Point and a Policy Decision Point, published as OpenID Final Specification 1.0 in 2026. Endpoints live under /access/v1/. Future revisions may add methods but may not change existing semantics, and receivers must ignore unknown fields, so a v1 enforcement point keeps working against a later decision point."
+  - q: "Should I use OPA or Cedar?"
+    a: "Apply one test: does the policy need to be provable, or does it need to reach outside the application? Cedar can prove a new policy set grants strictly less than the old one across every possible request, but it cannot check a Terraform plan. Rego covers plans, CI, admission control and API authorization in one language, and offers no such proof."
+  - q: "Do I still need Kyverno or OPA Gatekeeper?"
+    a: "Only for what the API server cannot do. ValidatingAdmissionPolicy has been GA since Kubernetes 1.30 and MutatingAdmissionPolicy since 1.36, both running CEL in-process with no webhook. Reach for an add-on engine when you need resource generation, image signature verification, scheduled cleanup, policy reports, or audit of objects already in the cluster."
+  - q: "Can I write authorization policy in YAML?"
+    a: "Yes, and it is now the mainstream shape. Cerbos and Kyverno both use YAML for the outer structure and CEL for the leaf conditions. The split matters: YAML carries what the policy applies to, CEL carries the boolean. Pure YAML with no expression language cannot express conditions without deep nesting."
+  - q: "How do you apply an authorization policy to database rows?"
+    a: "Partial evaluation. Declare the table columns unknown, evaluate everything else, and emit the residual as a filter. OPA exposes this through the Compile API with SQL and UCAST targets, Cerbos through PlanResources, OpenFGA through ListObjects. The engine produces a predicate and the database enforces it."
+  - q: "What is the difference between ABAC and ReBAC?"
+    a: "ABAC decides from attributes carried on the request: department, clearance, time of day. ReBAC decides from whether a path exists in a relationship graph: Alice is a member of a group, the group edits a folder, the folder contains the document. ReBAC generalizes RBAC, and answers 'list everything this user can see' efficiently, which ABAC does not."
+---
+
+import Callout from "../../components/content/Callout.astro";
+import Tabs from "../../components/content/Tabs.astro";
+import Tab from "../../components/content/Tab.astro";
+
+Policy as code in August 2026 is a five-layer stack: a wire protocol, a condition language, a relationship graph, an authorization language, and a config validator. Four of those layers now have one clear answer. Only one is still a genuine decision. Teams that go shopping for a single winning language are shopping at the wrong layer.
+
+The comparison that gets written most often puts Rego, Cedar and OpenFGA in one table and declares a winner. That table is a category error. Nobody asks whether to use HTTP or TCP. These tools sit at different heights in the same stack and compose.
+
+## The five layers
+
+Read this bottom-up. The layers below the authorization language are plumbing you should adopt rather than debate. The layer above it is Kubernetes, which now ships its own engine.
+
+| Layer | The question it answers | Where it landed |
+|---|---|---|
+| Wire protocol | How does the enforcement point ask the decision point? | **AuthZEN Authorization API 1.0** |
+| Condition expressions | How do I write a boolean over attributes and context? | **CEL** |
+| Relationship graph | Who is connected to what, transitively? | **Zanzibar model** — OpenFGA, SpiceDB |
+| Authorization policy | May this principal do this action on this resource? | Still a real choice: Cedar or Rego |
+| Config validation | Is this manifest allowed to exist? | In-tree CEL first, Rego for everything else |
+
+<Callout tone="key" title="The short version">
+Adopt the four settled layers and stop arguing about them. Spend the argument budget on one question: does your authorization logic need to be provable, or does it need to reach outside the application?
+</Callout>
+
+## The wire protocol settled first
+
+The OpenID Foundation approved the [Authorization API 1.0](https://openid.net/authorization-api-1-0-final-specification-approved/) as a Final Specification on 12 January 2026, and published it on the Standards Track in March. It is the biggest change in this space in years, and it is not a language. It is the call itself: subject, action, resource, context in, a boolean out.
+
+```json title="POST /access/v1/evaluation"
+{
+  "subject":  { "type": "user",     "id": "alice@example.com" },
+  "action":   { "name": "can_edit" },
+  "resource": { "type": "document", "id": "boxcarring.md" },
+  "context":  { "time": "2026-08-27T15:22-07:00" }
+}
+```
+
+Three details in the [spec](https://openid.github.io/authzen/) show it was written by people who had operated one of these:
+
+1. **Decisions fail closed.** The field is a plain boolean and absence means deny.
+2. **Batch has semantics.** The `/access/v1/evaluations` endpoint supports `execute_all`, `deny_on_first_deny` and `permit_on_first_permit`, so one round trip can express an AND or an OR across resources.
+3. **The reverse question is in scope.** Search endpoints answer which resources a subject can act on. That is the query that pushes teams onto relationship engines in the first place.
+
+The practical effect: your policy decision point is now a replaceable component. The policy language is what you are actually locked into.
+
+## CEL won the condition layer
+
+[Common Expression Language](https://cel.dev/overview/cel-overview) is a non-Turing-complete expression language from Google. It is the answer to "can I write policy in YAML," because the mainstream shape is YAML for structure with CEL in the leaves. YAML says what the rule applies to. CEL says whether it passes.
+
+The adoption list is the argument. CEL runs [inside kube-apiserver](https://kubernetes.io/docs/reference/using-api/cel/), in Google Cloud IAM conditions, in Istio, in Cerbos conditions, in OpenFGA conditions since schema 1.1, and in SpiceDB caveats. Kyverno rewrote its policy API onto it and said why: Kubernetes invested heavily in CEL, so using it means one less thing for platform teams to learn.
+
+If you are picking an expression syntax for anything policy-shaped in 2026, this decision is already made for you.
+
+## The relationship layer runs on Zanzibar
+
+Google's 2019 Zanzibar paper described one authorization backend behind Drive, YouTube and Calendar, built on a single abstraction: the relationship. Seven years on, the open implementations have converged. [OpenFGA](https://openfga.dev/docs/) reached CNCF incubating status in October 2025. [SpiceDB](https://github.com/authzed/spicedb) remains the most faithful to the paper.
+
+The reason to care is a query, not a model. "Can Alice open this document" is cheap in any engine. "List every document Alice can see" is cheap only if you stored the relationships as a graph. If your product has user-driven sharing, folder inheritance, or org hierarchies, that query shows up on day one.
+
+Pick SpiceDB when a revoked permission must not survive in a cache. Its ZedTokens let a caller demand a read at least as fresh as its own last write. Pick OpenFGA for the gentler onramp and vendor-neutral governance.
+
+## The one real choice: Cedar or Rego
+
+Here is the same rule in six languages: **an editor may edit a document in their own department during business hours, and nobody may edit an archived document.** It mixes a role, an attribute comparison, a context value, and a hard override. Those four things are what separate these languages.
+
+<Tabs label="The same authorization rule in six languages">
+
+<Tab label="Rego (OPA 1.x)">
+
+```python title="document/authz.rego"
+package document.authz
+
+default allow := false
+
+allow if {
+	input.user.role == "editor"
+	input.user.department == input.resource.department
+	business_hours
+	not archived
+}
+
+business_hours if {
+	hour := time.clock(time.now_ns())[0]
+	hour >= 9
+	hour < 17
+}
+
+archived if input.resource.status == "archived"
+```
+
+Conditions inside a rule body are AND. Separate rules with the same head are OR. That is the Datalog heritage, and it is the part that takes a week to stop fighting.
+
+Note what is missing: a deny-override. You write `not archived` into every allow rule, or you query a separate `deny` rule and combine in the caller. Note also what is absent from the top of the file. Since [OPA 1.0](https://openpolicyagent.org/docs/v0-upgrade) the `if` keyword is mandatory and `import rego.v1` is obsolete. Any example still carrying that import predates 2025.
+
+</Tab>
+
+<Tab label="Cedar">
+
+```rust title="document.cedar"
+// schema
+entity User in [Role] { department: String };
+entity Document       { department: String, status: String };
+action editDocument appliesTo {
+  principal: User,
+  resource: Document,
+  context: { hour: Long }
+};
+
+// policies
+permit (
+  principal in Role::"Editor",
+  action == Action::"editDocument",
+  resource
+)
+when {
+  principal.department == resource.department &&
+  context.hour >= 9 && context.hour < 17
+};
+
+forbid (principal, action, resource)
+when { resource.status == "archived" };
+```
+
+Every policy is a `permit` or a `forbid`, and `forbid` always wins. That is language semantics, not a convention your caller has to remember. The schema is mandatory for validation. Compare the `forbid` block against the Rego tab: one is a guarantee, the other is a habit.
+
+</Tab>
+
+<Tab label="Cerbos (YAML + CEL)">
+
+```yaml title="policies/document.yaml"
+apiVersion: api.cerbos.dev/v1
+derivedRoles:
+  name: document_roles
+  definitions:
+    - name: same_department
+      parentRoles: ["editor"]
+      condition:
+        match:
+          expr: request.resource.attr.department == request.principal.attr.department
+---
+apiVersion: api.cerbos.dev/v1
+resourcePolicy:
+  resource: document
+  version: default
+  importDerivedRoles: ["document_roles"]
+  rules:
+    - actions: ["edit"]
+      effect: EFFECT_ALLOW
+      derivedRoles: ["same_department"]
+      condition:
+        match:
+          expr: now().getHours() >= 9 && now().getHours() < 17
+
+    - actions: ["edit"]
+      effect: EFFECT_DENY
+      roles: ["*"]
+      condition:
+        match:
+          expr: request.resource.attr.status == "archived"
+```
+
+The YAML-plus-CEL shape in full. [Derived roles](https://docs.cerbos.dev/cerbos/latest/policies/derived_roles) are the idea worth stealing: the identity provider hands over a static role, and Cerbos upgrades it to a contextual one at request time. `editor` becomes `same_department`. The condition is written once and reused across resource policies.
+
+</Tab>
+
+<Tab label="OpenFGA DSL">
+
+```text title="model.fga"
+model
+  schema 1.1
+
+type user
+
+type department
+  relations
+    define member: [user]
+
+type document
+  relations
+    define department: [department]
+    define owner: [user]
+    define editor: [user, department#member] or owner
+    define can_edit: editor
+
+condition business_hours(current_hour: int) {
+  current_hour >= 9 && current_hour < 17
+}
+```
+
+Nothing here is a rule about attributes. It is a type system over relationships, and access exists when a path exists. `member from department` gives you group inheritance for free.
+
+The weak spot is visible too. Conditions can only hang off a relationship assignment, so the business-hours check cannot stand on its own as a policy.
+
+</Tab>
+
+<Tab label="SpiceDB schema">
+
+```text title="schema.zed"
+definition user {}
+
+definition department {
+  relation member: user
+}
+
+definition document {
+  relation department: department
+  relation owner: user
+  relation editor: user | department#member
+
+  permission edit = editor + owner
+}
+
+caveat business_hours(current_hour int) {
+  current_hour >= 9 && current_hour < 17
+}
+```
+
+Same model, different syntax, one meaningful difference underneath: SpiceDB implements Zanzibar's consistency story. If "revoke must take effect immediately" is a written requirement rather than a hope, that is the reason to choose it.
+
+</Tab>
+
+<Tab label="AWS IAM JSON">
+
+```json title="policy.json"
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "EditOwnDepartmentDocs",
+      "Effect": "Allow",
+      "Action": "docs:UpdateDocument",
+      "Resource": "arn:aws:docs:us-west-2:111122223333:document/*",
+      "Condition": {
+        "StringEquals": {
+          "aws:PrincipalTag/department": "${aws:ResourceTag/department}"
+        }
+      }
+    },
+    {
+      "Sid": "DenyArchived",
+      "Effect": "Deny",
+      "Action": "docs:UpdateDocument",
+      "Resource": "*",
+      "Condition": {
+        "StringEquals": { "aws:ResourceTag/status": "archived" }
+      }
+    }
+  ]
+}
+```
+
+Still the most deployed policy language on earth by volume, and useful here as the baseline the others reacted against. No schema. No types. Conditions expressed as nested operator keys instead of an expression. Worst of all, no local reasoning: the effective permission depends on identity policies, resource policies, SCPs, RCPs, permission boundaries and session policies at once. Cedar is in large part Amazon's answer to this.
+
+</Tab>
+
+</Tabs>
+
+### What Cedar bought by giving things up
+
+Cedar is the only language here that dropped expressiveness on purpose. No loops, no recursion, no side effects, no calling a service mid-evaluation. The payoff is that a policy set compiles to SMT formulas a solver can check, and the compiler itself is modelled and proven in Lean.
+
+[Cedar Analysis](https://aws.amazon.com/blogs/opensource/introducing-cedar-analysis-open-source-tools-for-verifying-authorization-policies/) shipped as open source in June 2025. The [symbolic compiler](https://github.com/cedar-policy/cedar/tree/main/cedar-policy-symcc) supports six checks, each with a counterexample variant that synthesizes a concrete failing request:
+
+```bash
+cedar symcc check-never-errors  --policies p.cedar   --schema s.cedarschema
+cedar symcc check-always-denies --policies p.cedar   --schema s.cedarschema
+cedar symcc check-implies       --policies old.cedar --policies new.cedar
+cedar symcc check-equivalent    --policies old.cedar --policies new.cedar
+```
+
+`check-implies` is the one that matters. It answers whether a new policy set grants strictly less than the old one, across every possible request rather than across the test cases someone thought of. That turns a policy review from an argument into a build step.
+
+The cost is real. You maintain a schema, you marshal entity data into every request, and anything general-purpose is out of scope by construction. Cedar cannot check your Terraform plan.
+
+### The versions, and one number not to trust
+
+| Engine | Version, August 2026 | Governance |
+|---|---|---|
+| OPA | v1.19.1 | CNCF graduated |
+| Cedar | Rust crate 4.12.0, language 4.5 | Apache 2.0, AWS-led |
+| Kubernetes in-tree | VAP GA 1.30, MAP GA 1.36 | Kubernetes SIG |
+| Kyverno | v1.18.1 | CNCF |
+| AuthZEN API | 1.0 Final | OpenID Foundation |
+
+Two things to carry from that table. [Amazon Verified Permissions](https://docs.aws.amazon.com/verifiedpermissions/latest/userguide/what-is-avp.html) documents itself as running "Cedar 4.7" while the open-source crate is at 4.12.0 with language version 4.5, so pin the language version rather than the crate number. And on the OPA side, Apple hired the Styra team in August 2025; the [maintainers' note](https://medium.com/open-policy-agent/note-from-teemu-tim-and-torin-to-the-open-policy-agent-community-2dbbfe494371) confirms the project stayed under CNCF governance with the same maintainer list, and Styra's commercial distribution, the OPA Control Plane, the SDKs and the Regal linter were all donated to the OPA organization.
+
+The number not to trust is the benchmark. Teleport's SPEF framework measured Cedar roughly 29–35× faster than OpenFGA and 43–81× faster than Rego. Cedar evaluates local attributes, OpenFGA walks a graph, Rego runs Datalog queries over a document model. Those are different operations, and in any real deployment the network hop to the decision point dominates all three.
+
+## Kubernetes grew its own policy engine
+
+For years the answer to cluster policy was a webhook, which meant a pod in the write path of every API request and a genuine risk of wedging your own control plane. [ValidatingAdmissionPolicy](https://kubernetes.io/docs/reference/using-api/cel/) went GA in Kubernetes 1.30 and MutatingAdmissionPolicy in 1.36. Both run CEL inside the API server.
+
+<Tabs label="Three ways to enforce a Kubernetes admission rule">
+
+<Tab label="ValidatingAdmissionPolicy">
+
+```yaml title="require-team-label.yaml"
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: require-team-label
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+  validations:
+    - expression: "has(object.metadata.labels) && 'team' in object.metadata.labels"
+      message: "Pods must carry a 'team' label."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: require-team-label-binding
+spec:
+  policyName: require-team-label
+  validationActions: ["Deny"]
+  matchResources:
+    namespaceSelector:
+      matchLabels: { env: prod }
+```
+
+No webhook pod, no network hop, no circular dependency where the policy controller needs the cluster it is protecting. The policy and its binding are separate objects, which is how one policy gets scoped to many namespaces with different parameters.
+
+</Tab>
+
+<Tab label="Kyverno ValidatingPolicy">
+
+```yaml title="require-team-label-and-registry.yaml"
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: require-team-label-and-registry
+spec:
+  validationActions: [Deny]
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  variables:
+    - name: allContainers
+      expression: >-
+        object.spec.containers
+        + object.spec.?initContainers.orValue([])
+        + object.spec.?ephemeralContainers.orValue([])
+  validations:
+    - expression: "'team' in object.metadata.?labels.orValue({})"
+      message: "Pods must carry a 'team' label."
+    - expression: "variables.allContainers.all(c, image(c.image).registry() == 'ghcr.io')"
+      message: "Images must come from ghcr.io."
+```
+
+Kyverno's [new API](https://kyverno.io/docs/policy-types/validating-policy/) is a deliberate superset of ValidatingAdmissionPolicy: same CEL, same `matchConstraints` shape, plus variables, [extra CEL libraries](https://kyverno.io/docs/policy-types/cel-libraries/) for image parsing and ConfigMap lookups, policy reports and exceptions.
+
+The old JMESPath `ClusterPolicy` type is deprecated in the 1.17/1.18 line with removal targeted for v1.20. New policy written against `ClusterPolicy` today is written against a dead API.
+
+</Tab>
+
+<Tab label="Gatekeeper ConstraintTemplate">
+
+```yaml title="k8srequiredlabels.yaml"
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: k8srequiredlabels
+spec:
+  crd:
+    spec:
+      names: { kind: K8sRequiredLabels }
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            labels:
+              type: array
+              items: { type: string }
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8srequiredlabels
+
+        violation contains {"msg": msg} if {
+          required := input.parameters.labels[_]
+          not input.review.object.metadata.labels[required]
+          msg := sprintf("missing required label: %v", [required])
+        }
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sRequiredLabels
+metadata:
+  name: pods-must-have-team
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+  parameters:
+    labels: ["team"]
+```
+
+The two-object split is the durable idea, and Kubernetes copied it: a template holds reusable logic plus a parameter schema, a constraint instantiates it with values and a scope.
+
+Note the rule produces reasons rather than a boolean, so the person whose deploy just failed gets a message. Note also `violation contains {...} if {...}` — that is Rego v1 partial-set syntax.
+
+</Tab>
+
+</Tabs>
+
+The 2026 pattern is hybrid. In-tree CEL for the roughly 80% that is structural validation: Pod Security Standards, required labels, image tag rules, replica limits. An add-on engine only for generation, cosign signature verification, scheduled cleanup, policy reports, and audit of what already exists in the cluster.
+
+## Compile the policy into the query
+
+A yes/no decision call works for "can Alice open this document." It falls apart for "show Alice her documents," because you cannot fetch a million rows and ask a million times. I have watched teams solve this three times with hand-written filter code that drifts from the policy it is supposed to mirror. There is a mechanism for it, and it is underused.
+
+That mechanism is partial evaluation. Hold the table columns unknown, evaluate everything else, and emit the residual as a filter.
+
+```python title="filters.rego"
+# METADATA
+# scope: package
+# custom:
+#   unknowns: ["input.documents"]
+package filters
+
+include if {
+	input.documents.department == input.user.department
+	input.documents.status != "archived"
+}
+```
+
+What comes back is a predicate, not a decision:
+
+```sql
+WHERE documents.department = E'engineering'
+  AND documents.status != E'archived'
+```
+
+OPA's Compile API does this natively, and the [data-filtering docs](https://openpolicyagent.org/docs/filtering/fragment) spell out which Rego fragment is translatable. The donated Enterprise OPA code adds dialect targets for PostgreSQL, MySQL, SQL Server and SQLite, a portable UCAST JSON form for Prisma and LINQ, and a paired rule for column masking. Cerbos exposes the same idea as `PlanResources`, OpenFGA as `ListObjects`.
+
+One pattern, three names. The engine emits a predicate and the database enforces it. If you have ever written a row access policy, this is the same architecture with the enforcement point living inside a query planner.
+
+## What good looks like
+
+Engine-independent on purpose. Every item survives a change of policy language, which is the test of whether it is architecture or fashion.
+
+**Structure**
+
+1. **Separate the decision from the enforcement.** Speak AuthZEN between them so the decision point stays replaceable.
+2. **Default deny.** `default allow := false` in Rego, permit-only semantics in Cedar, absent means denied in AuthZEN.
+3. **Produce violations, not booleans.** A rule that returns a reason gives the user something actionable and the auditor something to read.
+4. **Give policy a schema.** Untyped policy over untyped JSON is how silent authorization bugs get made.
+
+**Lifecycle**
+
+1. **Test policy like code.** Every policy file has a test file, and the pipeline gates on coverage.
+2. **Lint and format.** `opa check --strict`, `opa fmt`, and Regal, now hosted in the OPA organization.
+3. **Version the artifact.** Build a bundle once, publish it to a versioned path, and move the `latest` pointer only after a smoke test.
+4. **Audit before enforce.** Every engine here has a dry-run mode. Read the violations against real traffic first.
+5. **Make exceptions expire.** An exception with an owner and an end date stays an exception. One without becomes a permanently disabled rule.
+
+That list is mechanism, not intention. Each item holds without anyone remembering to do the right thing, which is the only kind of control worth writing down.
+
+## Agents are the next pressure
+
+An AI agent calling tools is a non-human identity making unpredictable requests on a human's behalf. Static IAM handles that case worst, and the responses arriving now all reuse this same stack rather than inventing a sixth layer.
+
+[Docker writes its MCP governance policies in Cedar](https://docs.docker.com/ai/sandboxes/governance/access-controls/mcp/), with a `@requireApproval` annotation: a matching permit triggers an interactive prompt to the operator instead of a silent allow. MCP gateways put a CEL gate in front of every `tools/call` and chain Cedar, OPA and Casbin plugins behind it, aggregating conservatively so an external engine can only tighten access.
+
+The shift worth watching is in the decision itself. Allow, deny, and **ask a human** is becoming a third outcome, with obligations like masking and rate limiting attached to the result. AuthZEN already has somewhere to put that: the response `context` object carries step-up authentication requirements in the spec's own examples.
+
+Four layers are done. Pick your language for the fifth, write down which one and why, and get back to work.

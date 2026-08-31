@@ -1,0 +1,80 @@
+---
+/**
+ * Tab group for showing the same idea in several forms.
+ *
+ * Progressive enhancement: the server renders every <Tab> panel with a visible
+ * label. The script below builds the tab bar and hides all but one panel. With
+ * JavaScript off the page still reads as a labeled sequence, which also keeps
+ * Pagefind indexing every panel.
+ *
+ * Styling lives in src/styles/global.css under `.prose .tabs`.
+ */
+interface Props {
+  /** Accessible name for the tab list. */
+  label?: string;
+}
+
+const { label } = Astro.props;
+---
+
+<div class="tabs" data-tabs>
+  <div class="tab-bar" role="tablist" aria-label={label}></div>
+  <slot />
+</div>
+
+<script>
+  for (const root of document.querySelectorAll<HTMLElement>("[data-tabs]")) {
+    const panels = Array.from(
+      root.querySelectorAll<HTMLElement>("[data-tab-label]"),
+    );
+    const bar = root.querySelector<HTMLElement>(".tab-bar");
+    if (!bar || panels.length < 2) continue;
+
+    const group = Math.random().toString(36).slice(2, 8);
+    const buttons: HTMLButtonElement[] = [];
+
+    const select = (index: number) => {
+      panels.forEach((panel, i) => {
+        panel.hidden = i !== index;
+      });
+      buttons.forEach((button, i) => {
+        const selected = i === index;
+        button.setAttribute("aria-selected", selected ? "true" : "false");
+        button.tabIndex = selected ? 0 : -1;
+      });
+    };
+
+    panels.forEach((panel, i) => {
+      const panelId = `tabpanel-${group}-${i}`;
+      const buttonId = `tab-${group}-${i}`;
+
+      panel.id = panelId;
+      panel.setAttribute("role", "tabpanel");
+      panel.setAttribute("aria-labelledby", buttonId);
+
+      const button = document.createElement("button");
+      button.type = "button";
+      button.id = buttonId;
+      button.className = "tab-button";
+      button.textContent = panel.dataset.tabLabel ?? `Option ${i + 1}`;
+      button.setAttribute("role", "tab");
+      button.setAttribute("aria-controls", panelId);
+      button.addEventListener("click", () => select(i));
+      button.addEventListener("keydown", (event) => {
+        const step =
+          event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+        if (step === 0) return;
+        event.preventDefault();
+        const next = (i + step + panels.length) % panels.length;
+        select(next);
+        buttons[next].focus();
+      });
+
+      bar.appendChild(button);
+      buttons.push(button);
+    });
+
+    root.setAttribute("data-tabs-ready", "");
+    select(0);
+  }
+</script>

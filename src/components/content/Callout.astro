@@ -1,0 +1,18 @@
+---
+/**
+ * Aside for a claim worth pulling out of the flow.
+ * Styling lives in src/styles/global.css under `.prose .callout`.
+ */
+interface Props {
+  title?: string;
+  /** `key` draws the accent border; `note` stays neutral. */
+  tone?: "note" | "key";
+}
+
+const { title, tone = "note" } = Astro.props;
+---
+
+<aside class:list={["callout", `callout-${tone}`]}>
+  {title ? <p class="callout-title">{title}</p> : null}
+  <slot />
+</aside>

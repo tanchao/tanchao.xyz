@@ -64,7 +64,11 @@ function changedPosts(): string[] {
   // Committed diffs vs origin/main + untracked new files (uncommitted drafts).
   const committed = run(["diff", "--name-only", "origin/main", "--", "src/content/posts"]);
   const untracked = run(["ls-files", "--others", "--exclude-standard", "--", "src/content/posts"]);
-  const set = new Set([...committed, ...untracked].filter((f) => f.endsWith(".md")));
+  const set = new Set(
+    [...committed, ...untracked].filter(
+      (f) => f.endsWith(".md") || f.endsWith(".mdx"),
+    ),
+  );
   if (!set.size && !committed.length && !untracked.length) {
     console.error("⚠️  Could not read git; use --all or pass file paths.");
   }
@@ -75,7 +79,7 @@ function targets(): string[] {
   if (explicit.length) return explicit.map((f) => join(process.cwd(), f));
   if (all)
     return readdirSync(POSTS_DIR)
-      .filter((f) => f.endsWith(".md"))
+      .filter((f) => f.endsWith(".md") || f.endsWith(".mdx"))
       .map((f) => join(POSTS_DIR, f));
   return changedPosts();
 }
