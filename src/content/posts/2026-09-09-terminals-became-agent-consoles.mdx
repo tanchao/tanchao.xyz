@@ -1,0 +1,205 @@
+---
+title: "Terminals became agent consoles. Only one shipped a policy gate."
+description: "herdr, Warp, iTerm2 and Claude Code all converged on the same screen: every running agent, its state, and which one is blocked on you. Getting that state out of a byte stream takes screen scraping, transcript parsing, or a protocol — and three incompatible protocols now exist. The declaration channel already carries the command an agent wants to run, which makes it a policy decision point nobody wired up."
+tldr: "Four independent products built the same agent management console in 2026, and all of them hit the same wall: a terminal sees an undifferentiated byte stream and cannot tell whether an agent is working or blocked. The three fixes are screen scraping, reading the harness's transcript files, or a declaration protocol — and three mutually incompatible protocols shipped (iTerm2's OSC 21337, Warp's warp://cli-agent over OSC 777, Otty's proposed OSC 26). Warp's protocol already carries the full command text of a permission request but has no return channel, so it is a policy request with no decision. iTerm2 is the only one that built the gate."
+date: 2026-09-09
+tags: ["ai", "agents", "terminal", "cli", "developer-tools", "governance", "engineering"]
+draft: false
+faq:
+  - q: "How does a terminal know whether a coding agent is working or blocked?"
+    a: "Three ways, in ascending order of reliability. It matches patterns against the rendered screen, which is what herdr does for Claude Code and Codex. It parses the harness's own transcript files on disk, which is how Omnara started. Or the agent declares its state over a channel, which requires the agent to ship an integration. Nothing in a plain PTY byte stream carries this information."
+  - q: "Is there a standard escape sequence for agent status?"
+    a: "No. Three incompatible mechanisms shipped or were proposed in 2026: iTerm2's OSC 21337 Session Status (shipped in 3.7.0 on 8 September 2026, free-form status string), Warp's warp://cli-agent JSON payload carried over OSC 777, and Otty's proposed OSC 26 Terminal Agent Protocol (closed status enum, no second implementer). The terminal-wg specifications repository has no agent-status proposal."
+  - q: "Does Warp use OSC 133 to find where a command starts and ends?"
+    a: "No. Warp injects shell bootstrap scripts that hook precmd and preexec, and those hooks emit hex-encoded JSON inside a DCS sequence. Warp's parser accepts OSC 133 sub-parameters A, B and P for prompt boundaries only; C and D, the marks that actually delimit a command, fall through to UnknownParam and are discarded."
+  - q: "Why did Claude Code not adopt OSC 133?"
+    a: "It was asked and declined. Issue #26235, filed 17 February 2026, proposed mapping OSC 133 A/B/C/D onto Claude Code's prompt and turn lifecycle. It was closed on 16 May 2026 with state_reason not_planned, by github-actions[bot], with no team response in the thread. Claude Code does emit OSC 8 hyperlinks and OSC 9;4 progress."
+  - q: "Which terminal enforces policy on agent commands?"
+    a: "iTerm2, as of the 3.6 and 3.7 releases. TerminalHardRules is a tokenized blocklist that surfaces catastrophic commands for one-tap approval, and anything it cannot decide falls through to an LLM classifier whose errors are fail-closed. An OrchestratorSafetyGate routes autonomous execution paths through the same check. herdr, Warp and the tmux wrappers ship notification and approval UI, not enforcement."
+  - q: "Does herdr sandbox its plugins?"
+    a: "No. The documentation states that herdr 'does not review or sandbox plugin code' and that 'the entire Herdr CLI is the plugin API.' Every managed pane process receives HERDR_SOCKET_PATH in its environment, and the socket exposes pane.read, pane.send_keys and pane.send_input for every pane, so any process running as your user can read and drive every agent in the session."
+  - q: "Do agents survive a machine restart under herdr?"
+    a: "No. Until 7 September 2026 the README said 'restart the machine — agents keep working and sessions come back.' It now says herdr 'restores the saved layout and can resume supported agent sessions; the original processes do not survive.' The session-state documentation was always accurate: 'Server restart | Processes keep running: No.'"
+---
+
+import Callout from "../../components/content/Callout.astro";
+
+> Part of a series on the interfaces coding agents act through. Previous: [Why coding agents lean on the shell](/posts/2026/08/02/why-coding-agents-lean-on-the-shell/) and [The orchestrator is blind on purpose](/posts/2026/08/07/the-orchestrator-is-blind-on-purpose/).
+
+An agent management console is the screen that shows every running coding agent, its state, and which one is blocked on you. In 2026 that screen moved into the terminal. Four vendors built it independently and converged on the same shape. Only one of them gave it the authority to stop a command.
+
+I went looking at `herdr` because it is the loudest example. I ended up somewhere I did not expect. The terminal emulator that got flamed for adding a chat box in 2024 is the only one in this field with a working enforcement point.
+
+## The console everyone converged on
+
+Four parts, arrived at independently by products that share no code. One isolated workspace per agent, usually a git worktree. A list of agents grouped by state. An attention queue that surfaces whichever agent is blocked on a human. And a diff-plus-pull-request surface for reviewing what came out.
+
+The convergence is easiest to see in the state vocabularies, which are nearly identical and entirely uncoordinated:
+
+| Product | States |
+|---|---|
+| [herdr](https://herdr.dev/docs/agents/) | `working`, `blocked`, `done`, `idle`, `unknown` |
+| [Claude Code agent view](https://code.claude.com/docs/en/agent-view) | Working, Needs input, Idle, Completed, Failed, Stopped |
+| [Warp](https://docs.warp.dev/platform/managing-cloud-agents/) | working, blocked, failed, canceled |
+| [Otty OSC 26](https://docs.otty.sh/vt/osc/osc-26) | `idle`, `running`, `awaiting-approval`, `awaiting-input`, `error`, `finished` |
+
+Claude Code's version is the most carefully built, and it came from the model vendor rather than a wrapper. `claude agents` [shipped as a research preview](https://code.claude.com/docs/en/whats-new/2026-w20) in May 2026: one screen per session, rows for what is running, what is blocked, what is done. It models process liveness separately from task state, which most wrappers conflate, and it pays a Haiku-class model to write each row summary.
+
+One detail in that implementation says more than the rest of the feature. Claude Code scrapes `gh` output to attach a pull request to each row, then colours the number by check status. The terminal state of an agent, in the product built by the company that makes the agent, is not "the agent finished." It is "the pull request is green."
+
+## A terminal cannot see any of this
+
+Here is the constraint the whole category runs into. A PTY carries a byte stream and a character grid. There is no field in it for "this program is waiting for you." A terminal emulator watching Claude Code render a permission prompt sees the same class of bytes it sees when Claude Code renders a spinner.
+
+Otty's spec states the problem better than anyone else's marketing does:
+
+> The bytes on the PTY are just a screen render; the terminal has no structured channel to learn any of it. Today terminals resort to matching process names or reverse-engineering each agent's private files — fragile, and it breaks on every upstream version bump.
+
+This is the same recovery problem the shell had, and it was solved once already. [OSC 133](https://gitlab.freedesktop.org/Per_Bothner/specifications/blob/master/proposals/semantic-prompts.md) makes the shell mark its own prompt start, input start, output start, and command end with exit code. Eight years of adoption later, iTerm2, kitty, WezTerm, Ghostty, VS Code, Contour and foot all understand it. The agent layer is where the shell was in 2018.
+
+## Three ways to know an agent is blocked
+
+Every product in this category picks one of three mechanisms, and the choice determines how much of its state display is a guess.
+
+1. **Match patterns against the rendered screen.** Cheap, works on any agent, breaks when the agent's TUI changes.
+2. **Parse the harness's transcript files on disk.** More reliable, requires knowing each harness's private format. Omnara began by reading `~/.claude/projects` and [rewrote onto the Claude Agent SDK](https://news.ycombinator.com/item?id=46991591) once one existed.
+3. **Have the agent declare its state.** Correct, and it requires the agent to ship an integration you do not control.
+
+herdr is the clearest case because its documentation is unusually honest about which one it is using. It resolves the pane's foreground process, then evaluates TOML manifests against a snapshot of the live bottom of the pane buffer. Of the twenty-one agents it detects, [six](https://herdr.dev/docs/integrations/) report lifecycle state over the socket: Pi, OMP, Kimi Code CLI, OpenCode, Kilo Code CLI, MastraCode. Claude Code, Codex and Cursor Agent CLI are not among them. Their integrations report session identity for restore, and their state comes from pattern matching.
+
+The failure mode is documented and biased in one direction. If no manifest rule matches for a known agent, [herdr falls back to `idle`](https://herdr.dev/docs/agents/) and labels the fallback `default_known_agent_idle_fallback`. An unrecognised approval prompt reads as idle, which is the one wrong answer that matters, because idle is the state that means "does not need you." A user on Hacker News [hit exactly this](https://news.ycombinator.com/item?id=48756578): "when an agent is waiting for a shell command, it shows as 'idle', which IMO is wrong."
+
+The tell that screen scraping is structurally a treadmill is how herdr maintains those rules. It **checks herdr.dev for remote manifest updates and applies them automatically, without a restart**. Detection rules ship out of band, over the network, faster than the binary does. That is the antivirus signature model, and it is the right engineering response to the same underlying condition: the thing you are recognising keeps changing shape, and it changes faster than you can ship a release.
+
+## The protocols exist, in three incompatible flavours
+
+Three declaration channels for agent state now exist. None of them knows about the others.
+
+**iTerm2 OSC 21337, shipped.** Landed in iTerm2 3.7.0 on 8 September 2026, one day before I started writing this.
+
+```
+OSC 21337 ; status=[text] ; indicator=[color] ; status-color=[color] ; detail=[text] ST
+```
+
+George Nachman's [own framing](https://iterm2.com/documentation-session-status.html): "Status is most useful when you run many long-lived sessions at once, such as several coding agents." The consumption side is a toolbelt sorted by priority, defaulting to waiting, then working, then idle, plus a floating Cockpit panel across all windows. Critically, `status` is a free-form string. It is a display channel, not a state machine.
+
+**Warp's `warp://cli-agent`, shipped and undocumented.** Warp carries a JSON payload inside `OSC 777`, written to `/dev/tty` rather than stdout, because a hook's stdout is the harness's own return channel. Six envelope fields, seven events. There is no public specification; the protocol was [reverse-engineered from Warp's three open-source adapters](https://yigitkonur.com/reverse-engineering-warp-cli-agent-protocol) in April 2026. It has a real capability gate, `WARP_CLI_AGENT_PROTOCOL_VERSION`, and real version negotiation.
+
+**Otty's OSC 26, proposed.** The only vendor-neutral attempt, and the only one with a closed `Status` enum, which is the design decision that separates a machine-readable protocol from a label. It includes `awaiting-approval` as a distinct state from `awaiting-input`, and explains why that state cannot live in `OSC 9;4`: "that enum is a progress model and has no room for an attention state." The spec repository the docs point at returns 404, and I found no second implementer.
+
+There is also one channel running the other way. Contour merged [DEC Mode 2034](https://contour-terminal.org/vt-extensions/semantic-block-query/) in February 2026, which lets a program *query* the terminal for structured JSON of the last command, its exit code, and its output, gated behind a session token the terminal hands out at mode-enable time. It is the only query protocol in the field, and Contour is its only implementer.
+
+<Callout tone="key" title="Where standardisation actually stands">
+The [terminal-wg specifications](https://gitlab.freedesktop.org/terminal-wg/specifications) tracker has no agent-status proposal. Desktop notifications have been unstandardised there for a decade, which is why `OSC 9`, `OSC 99` and `OSC 777` all mean the same thing to different terminals. Zed's [Agent Client Protocol](https://agentclientprotocol.com/protocol/overview) did standardise editor-to-agent communication, with roughly forty agents in its registry, but it models one session at a time and says nothing about fleet status. A2A defines a task lifecycle (`submitted`, `working`, `input-required`, `completed`, `failed`) that maps almost exactly onto what these consoles display. Nobody in this category adopted it.
+</Callout>
+
+## The agent everyone wants to watch declined to declare
+
+The bottleneck is not the terminals. Terminals have implemented OSC 133 for eight years, and tmux shipped a rebuilt hook system on 9 September 2026 that turns [OSC 133 sequences into `pane-command-started`, `pane-command-finished` and `pane-shell-prompt` events](https://github.com/tmux/tmux/blob/master/CHANGES). An orchestrator can subscribe to "this pane's command finished" instead of matching a spinner. That release is a candidate, published the day I wrote this.
+
+The bottleneck is agent-side emission. [Issue #26235](https://github.com/anthropics/claude-code/issues/26235) asked Claude Code to emit OSC 133, with a four-line mapping onto its own turn lifecycle. Filed 17 February 2026. Closed 16 May 2026, `state_reason: not_planned`, by `github-actions[bot]`, with no team reply in nine comments. Three earlier requests were autoclosed the same way.
+
+So the ecosystem routes around the terminal entirely, and it does so in exactly the shape you would predict. Two Zellij plugins reach agent state by installing hooks into the agent's own config file. Otty installs hooks into Claude Code and Codex configs. Warp ships three adapter repositories, one per agent. Half a dozen tmux orchestrators match regexes against spinners. Every one of these workarounds is per-agent and breaks on an upstream version bump, which is the precise problem OSC 26 was written to eliminate and the precise reason it has no adopters.
+
+My prediction, held loosely: `OSC 9;4` wins by default. It is a worse protocol, it was a namespace squat on a notification sequence, and kitty's source code calls the people who implemented it "thoughtless." It also already works everywhere, and agents already emit it.
+
+## Warp built the request and forgot the response
+
+This is the finding that reframed the piece for me. One of Warp's seven events is `permission_request`, and it carries the full command:
+
+```json
+{
+  "v": 1,
+  "agent": "claude",
+  "event": "permission_request",
+  "session_id": "01J9K7P2E5S8V1Z3B2C4D6F8G0",
+  "cwd": "/Users/alice/projects/my-app",
+  "project": "my-app",
+  "summary": "Wants to run Bash: rm -rf node_modules && npm install",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "rm -rf node_modules && npm install",
+    "description": "Clean reinstall"
+  }
+}
+```
+
+Read that as a security engineer rather than a terminal user. The terminal receives a principal, an action, a resource, and the literal argument string, before the command runs. That is the input side of an authorization decision, delivered to a process that is architecturally positioned to block it.
+
+Warp renders it as a notification. The protocol is one-way by design; there is no return channel, no verdict, no way for the terminal to answer.
+
+I spent [most of August on policy languages](/posts/2026/08/27/no-golden-standard-policy-language/), and the shape that settled at the wire layer is AuthZEN: subject, action, resource, context in, a boolean out. Warp's `permission_request` is that request with the response deleted. Adding the response would not require a new protocol. It would require deciding that the terminal is allowed to say no.
+
+## iTerm2 is the only one that built the gate
+
+The terminal that got flamed for adding a chat box is the only one in this survey with real enforcement, and the reason is that the flaming forced the right architecture two years before anyone needed it.
+
+The 2024 sequence is worth getting right, because the usual retelling is wrong about what people objected to. iTerm2 3.5.0 shipped opt-in OpenAI features in May 2024 and drew a [307-comment Hacker News thread](https://news.ycombinator.com/item?id=40432446). Nachman's [retrospective](https://lobste.rs/~gnachman/threads) names what he had missed, and it was not privacy:
+
+> It was only after launch that I received genuinely thoughtful responses, such as how enterprise users would be unable to use software that includes this capability. I quit big tech a few years ago and maybe my sense for how big businesses work has become less finely honed.
+
+The complaint was procurement. An enterprise cannot ship a binary containing a network path to an LLM provider, whether or not it is switched on. So [3.5.1](https://iterm2.com/downloads/stable/iTerm2-3_5_1.changelog) moved every AI network call into a separate signed bundle that admins can block by bundle ID through MDM, and gated the in-app toggle behind admin access. The plugin is verified by EdDSA signature against a key compiled into iTerm2, and the source comment states the property plainly: the shipped binary has no relay endpoint, so installing the plugin *is* the consent and the capability. Not everyone agreed it helped; one participant argued the split produced weaker IPC guarantees than in-process code, and that objection is reasonable.
+
+Two years later, that architecture is what makes the agent features defensible. Current iTerm2 has three layers:
+
+- **Capability withheld, not refused.** Permissions rotate Never, Ask, Always, per category: Check Terminal State, Run Commands, View Contents, Control Terminal, Write to the File System. At Never, [the docs say](https://iterm2.com/documentation-ai-chat.html) "the AI agent will not be offered functions related to those categories." The tool is absent from the model's schema, not declined at call time.
+- **A deterministic floor.** `TerminalHardRules.swift` is explicit in its own comment: "This is a BLOCKLIST, not an allowlist. It never permits a command, and (matching Claude Code) it never hard-denies one either — a categorical deny has no approval path, which dead-ends a legitimate request and invites bypass attempts." It surfaces `rm -rf` at root, `dd` to a block device, `mkfs`, pipe-to-shell, and unbalanced quotes for one-tap approval. It skips `sudo`, `env` and leading variable assignments before tokenising, so `sudo rm -rf /` and `FOO=1 rm -rf /` both surface `rm`.
+- **A classifier above it, failing closed.** Anything the rules cannot decide falls through to a one-shot LLM side-query. "Anything short of an unambiguous allow is treated as unsafe... classification errors are fail-closed." A [July 2026 commit](https://github.com/gnachman/iTerm2/commit/ba861ffae0a570c9e875c695aef7bdb4af16067c) added `OrchestratorSafetyGate` to close the hole where autonomous execution paths reached the PTY on a one-time claim without per-action classification.
+
+That last commit is the one that convinced me this is real work rather than a checkbox. It fences untrusted screen content with a random sentinel, neutralises forged role delimiters, collapses line breaks so injected text cannot fake a row, and parses verdicts fail-closed against an injected yes. Somebody sat down and thought about an agent reading a poisoned file.
+
+## herdr has the position and none of the authority
+
+herdr is the best-placed product in this survey to enforce anything, and it enforces nothing. That is not an oversight, it is a stated scope decision, and it is worth being precise about because the position it occupies is genuinely valuable.
+
+The mechanics first, since they are good. Rust, Apache-2.0, 37,017 stars, [v0.9.0](https://github.com/herdrdev/herdr/releases) on 7 September 2026, a $6M seed led by Bessemer announced the day before I started this. The architecture is tmux's: a background server owns the PTYs, clients are thin renderers. The delta is a second control plane, a newline-delimited JSON socket with roughly ninety methods, and it is a real orchestration substrate. `agent.wait --until blocked` is server-owned and event-driven, and it pins the resolved pane occupant so a replacement cannot satisfy the wait. `agent.prompt` submits and waits atomically to avoid the race between two calls.
+
+Now the authority side.
+
+- **The socket is ambient.** herdr injects `HERDR_SOCKET_PATH` into every managed pane process. The socket exposes `pane.read`, `pane.send_keys` and `pane.send_input` for every pane. So each agent you run inside herdr can read and drive every other agent's terminal, and the access control is the filesystem permissions on `~/.config/herdr/herdr.sock`. There is no `SECURITY.md` and no documented authentication.
+- **Plugins are unsandboxed by design.** "There is no separate plugin SDK or restricted command set. The entire Herdr CLI is the plugin API." And: "it does not review or sandbox plugin code." Compare Zellij, also Rust, also client-server, whose plugin system takes anything that compiles to WebAssembly rather than an arbitrary argv command.
+- **The marketplace is a topic query.** It indexes public GitHub repositories tagged `herdr-plugin`, refreshed every thirty minutes, [explicitly unreviewed](https://herdr.dev/docs/marketplace/). I ran the query today: 1,058 repositories. That number is real as a repository count and soft as a plugin count, because tagging is self-service and several of the top-starred entries are not herdr plugins at all.
+- **The only audit surface is a plugin log** of plugin command invocations. No command audit, no agent-action log, no signed provenance.
+
+Policy has been pushed to a third party, and the third party is candid about the ceiling. [`StructuPath/herdr-guard`](https://github.com/StructuPath/herdr-guard) watches `pane.output_matched` events and requests interrupts on dangerous commands. Its README is the most useful document in this whole survey, because it states the physics of any observe-and-interrupt design:
+
+> Pane-watching can only *request* an interrupt after text renders.
+
+> Acceptance is not proof that the process received Ctrl+C or that execution changed.
+
+> The guard is advisory against a process that can disable the plugin, kill its pane, stop Herdr, or use an unobserved popup/nested session. The socket API has no plugin-specific read-only ACL in the current Herdr release.
+
+It also ships the correct fix alongside the incorrect one: a Claude Code `PreToolUse` hook that submits each tool call to the same rule set *before* execution and gets back `deny`, `warn` or `allow`. Same policy, evaluated at the tool call instead of at the pixels. That is the [gate-in-front-of-the-call](/posts/2026/08/26/reading-the-harness-debate/) pattern, and it works for the same reason: it runs before the side effect rather than racing it. The plugin has two stars.
+
+One more thing, because it is checkable and it goes to how the category talks about itself. Until 7 September the herdr README said "close the lid, drop the network, restart the machine — agents keep working and sessions come back." It now says herdr "restores the saved layout and can resume supported agent sessions; the original processes do not survive." The `session-state` documentation was correct the whole time, with a table row reading "Server restart | Processes keep running: No." The pitch was ahead of the docs by about a month, and it corrected itself.
+
+## The rest of the field, and where it went
+
+The independent wrapper layer had roughly eighteen months and then the model labs absorbed it. Anthropic shipped `claude agents`, Google turned the Antigravity agent manager into the whole product, Cognition made a Kanban of agents the default screen in Devin Desktop, and Cursor built a Cloud Agents dashboard.
+
+| Tool | Layer | Isolation | Policy beyond UX | Status |
+|---|---|---|---|---|
+| Claude Code `agents` | CLI, desktop, web | worktree per dispatched session | Managed settings via MDM, deny rules that local config cannot remove, OS-level sandbox | Active, research preview |
+| Cursor Cloud Agents | Web + IDE | Firecracker microVM, separate AWS account | Domain restrictions, audit logs to SIEM/S3 | Active |
+| Amp (Sourcegraph) | Web, native, CLI | ephemeral remote machines | OIDC tokens scoped to workspace/project/user/thread | Active; removed its TUI sidebar |
+| Warp / Oz | Terminal + cloud | Docker container per cloud agent | approvals only | Active |
+| Conductor | macOS + cloud | worktree local, Vercel Sandbox cloud | per-action approvals, SCIM | Active, $22M Series A |
+| Sculptor (Imbue) | Desktop | **Docker container per agent**, rejecting worktrees | container is the policy | Active |
+| Claude Squad | tmux TUI | tmux session + worktree | none | Active |
+| Vibe Kanban | Web | worktree | none | **Dead**, bloop shut down April 2026 |
+| Terragon | Cloud | container | none | **Dead**, February 2026 |
+| Crystal | Electron | worktree | none | **Deprecated** February 2026 |
+
+The epitaph is bloop's own, on shutting down Vibe Kanban at 28,000 stars: "the vast majority are free users and we couldn't find a business model that we could get excited about." This layer wants to be free infrastructure. The companies that can afford to give it away are the ones selling tokens underneath it.
+
+Two outliers are worth watching. Sculptor runs a Docker container per agent locally and argues directly against worktrees, because worktrees "share your local environment and require reinstalling dependencies for every agent." It is the only local tool whose isolation is a security boundary rather than a filesystem convenience. And Mitchell Hashimoto donated Ghostty to a non-profit, then [announced Superlogical](https://mitchellh.com/writing/superlogical) in July 2026 to build a terminal multiplexer on libghostty. He does not say the word agents anywhere in that post. Ghostty's position on AI in core has been consistent across four maintainers and thirteen months, and it has still shipped more useful agent infrastructure than most chat panels: a rewritten OSC 133, click-to-move-cursor in prompts, and `notify-on-command-finish`. None of it is an AI feature. All of it helps.
+
+## What I take from this
+
+- **The console is the easy half and it is finished.** Four products converged on the same four parts with no coordination. Nobody has a moat in a list grouped by status.
+- **State detection is the hard half, and most of it is inference.** Screen scraping with auto-updating rule files is the antivirus model applied to TUIs, and it inherits the treadmill. The honest products document their fallback; herdr names its `default_known_agent_idle_fallback` in explain output, which is more than most.
+- **Whoever owns the PTY owns the natural enforcement point, and almost nobody used it.** herdr sits on every pane and ships no policy. Warp receives the full command text of a permission request and returns nothing. That is not a capability gap. It is a decision about what the product is for.
+- **A gate has to run before the side effect.** herdr-guard's pane-watching can only request an interrupt after the text renders, and its own README says acceptance is not proof of anything. Its `PreToolUse` hook, same rules, runs before. [Good intention won't work, mechanism does](/posts/2026/08/03/governing-multi-party-agentic-systems/) — and position in the call sequence is part of the mechanism.
+- **The 2024 backlash produced the right architecture by accident.** Enterprises objected to a network path in the binary. The fix was a separately signed, MDM-blockable capability bundle. Two years later that is the only reason a terminal can credibly run commands on your behalf.
+
+My own terminal is iTerm2 3.7.0, the release that shipped Session Status and the Claude Code integration yesterday. Twenty-one panes open in one window right now. The AI settings are all sitting in my preferences file — function calling on, model set, a 1,050,000-token window — and the plugin that would let any of it run is not installed. The chat database exists, thirty-two kilobytes, zero rows. No tmux on this machine at all. The console shipped to me three separate ways and I have not opened it once.
