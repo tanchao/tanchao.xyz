@@ -2,7 +2,7 @@
 title: "Splitting custody from detection: EFS, Private Safety Processing, and ZDR"
 description: "Anthropic's Enterprise Frontier Safeguards and OpenAI's Private Safety Processing solve the same conflict the same way: the customer keeps custody of the data, the vendor keeps the detection. A field read on what each actually ships, whether the procurement blocker is gone, how to tier workloads against it, and the gaps neither vendor has closed."
 tldr: "Frontier misuse detection needs stored state to correlate across sessions and accounts; zero data retention is a promise of no stored state. Anthropic (EFS, Sep 1 2026) and OpenAI (Private Safety Processing, Aug 19 2026) both resolved it by moving custody to the customer while keeping detection vendor-operated, so only a signal crosses the boundary. Neither has published attestation, key-release protocol, or code identity, so 'automated systems read it, personnel do not' is still an access-control promise rather than an enforceable property."
-date: 2026-09-09
+date: 2026-09-05
 tags: ["ai", "security", "governance", "privacy", "enterprise"]
 draft: false
 faq:
@@ -12,6 +12,8 @@ faq:
     a: "Private Safety Processing, previewed August 19 2026, extends OpenAI's ZDR-compatible safety systems from evaluating each interaction alone to detecting patterns across related interactions. Content stays either on customer-controlled infrastructure or on OpenAI infrastructure encrypted with customer-held keys. When a risk is identified, OpenAI receives a narrowly defined signal indicating the type of activity, and OpenAI personnel do not receive the content even when it is flagged."
   - q: "Does EFS or PSP give you real zero data retention?"
     a: "Not in the original sense. Both relocate retention rather than remove it. EFS keeps a rolling window of activity data, now in the customer's bucket rather than Anthropic's. PSP requires content to persist somewhere long enough to correlate across interactions. What changed is custody and reviewer identity, not the existence of stored state."
+  - q: "How long is retained data actually kept?"
+    a: "Thirty days on the unflagged path. When content is flagged as violating the usage policy, Anthropic's published policy holds inputs and outputs for up to two years and trust-and-safety classification scores for up to seven years. The detector decides which path your traffic takes, and Anthropic has not published whether those ceilings change once storage moves to the customer's own bucket under EFS."
   - q: "Why did frontier models need data retention in the first place?"
     a: "Because the most serious misuse spans many tasks across multiple sessions and accounts, so scanning each interaction in isolation and discarding it immediately cannot see the pattern. Both vendors state this reasoning explicitly. Correlation over time requires state, and zero data retention is a promise of no state. That is the whole conflict."
   - q: "Did the retention policy actually cost Anthropic enterprise adoption?"
@@ -36,6 +38,8 @@ Separate the two convergences here, because they have different evidentiary weig
 
 The commercial consequence arrived on June 9 2026, when Fable 5 and Mythos 5 shipped as "covered models" with mandatory 30-day retention of prompts and outputs across every surface, overriding existing ZDR contracts with no opt-out ([Anthropic Privacy Center](https://privacy.claude.com/en/articles/15425996-data-retention-practices-for-covered-models)). For a bank that had negotiated a zero-retention data processing agreement, that was not a price increase. It was a hard no.
 
+Read the scope carefully, because this is the part enterprises underweighted. Retention attaches to the model *class*, not to a product. Mythos-class is the tier Anthropic placed above Opus, and Fable 5 and Mythos 5 are the same underlying model: Fable 5 carries the safety classifiers and ships broadly, Mythos 5 has the cyber safeguards lifted and goes only to Project Glasswing partners. The policy text covers "Mythos-class models and future models with similar capabilities that we designate as covered models." So this was never a Fable 5 problem to wait out. It is the default posture for every frontier model Anthropic ships from here, and the reason a fix had to be architectural rather than a one-model exception.
+
 ## The safety argument has evidence behind it
 
 It is easy to read mandatory retention as pretext for training data. The evidence does not support that reading, and the honest version of this post has to say so.
@@ -56,7 +60,11 @@ The details that matter for planning:
 - **Phased rollout, broad availability targeted "later this fall."** Eligible customers get interim ZDR on Fable 5 and 5.1 until their phase lands.
 - **Surfaces:** Claude Code, Claude Enterprise, the Claude Platform, Amazon Bedrock, Claude Platform on AWS, Google's Agent Platform, and Microsoft Foundry.
 
-Anthropic says it designed EFS with more than 100 customers spanning a quarter of the Fortune 100 and every US global systemically important bank, anchored by the Analysis and Resilience Center for Systemic Risk (ARC), whose members include the CISOs of Goldman Sachs, Morgan Stanley, Citi, Bank of America, and Wells Fargo. Named design partners in the post include Wells Fargo, Stripe, KPMG, FIS, Cognition, Factory, and Snowflake. *(Disclosure: I work at Snowflake. Nothing here is written on its behalf, and everything cited is public.)*
+Now subtract what already existed, because the announcement does not. Under the June policy, retained data on Amazon Bedrock already stayed in AWS, and on Google Cloud's Agent Platform it already stayed in GCP. Customer-managed encryption keys and access-transparency audit logs were already available to eligible organizations. Per-workspace retention scoping already worked. Strip those out and EFS's real additions are three: parity across first-party surfaces rather than custody depending on which reseller you bought through, custody of the first-party monitoring data itself, and automated-only review as an opt-in. That last one is the substantive change. The June policy already said no Anthropic personnel could read retained conversations by default, but human review could still occur through a controlled access path when content was flagged, by a small set of approved reviewers against a tamper-proof log. EFS removes the requirement rather than constraining it. Real, and narrower than "customers now control their data."
+
+Anthropic says it designed EFS with more than 100 customers spanning a quarter of the Fortune 100 and every US global systemically important bank, anchored by the Analysis and Resilience Center for Systemic Risk (ARC), whose members include the CISOs of Goldman Sachs, Morgan Stanley, Citi, Bank of America, and Wells Fargo. Named design partners in the post include Wells Fargo, Stripe, KPMG, FIS, Cognition, Factory, and Snowflake.
+
+*Disclosure: I work at Snowflake, one of those design partners. Nothing here is written on its behalf, everything cited is public, and the point below applies to Snowflake's quote exactly as it applies to the other sixteen.*
 
 Discount the seventeen testimonials in that post. Design partners with a co-authorship incentive tell you what the design brief was, not how the market responded.
 
@@ -68,7 +76,7 @@ PSP is the same split with a different emphasis. It extends OpenAI's existing pe
 
 The egress is deliberately thin. "When a risk is identified, OpenAI receives a narrowly defined signal indicating the type of activity involved," used to decide whether enforcement is needed, and "OpenAI personnel do not receive access to the customer content even when it is flagged." If a customer wants to appeal an enforcement decision or support an investigation, they can choose to share information, which makes content egress an explicit customer action rather than a default.
 
-Status: preview with early customers. OpenAI targeted both broader rollout and a technical white paper for September 2026. As of today, September 9, that white paper has not appeared. Named feedback partners include Glean, Databricks, Abridge, and Microsoft.
+Status: preview with early customers. OpenAI targeted both broader rollout and a technical white paper for September 2026. As of today, September 5, that white paper has not appeared. Named feedback partners include Glean, Databricks, Abridge, and Microsoft.
 
 ## Structurally identical, differently packaged
 
@@ -96,7 +104,7 @@ Three causes, and retention is only one:
 2. **Safeguard blast radius.** Cyber, biology, and chemistry queries could be blocked and routed to Opus 4.8. Zvi Mowshowitz lists this first among the objections, ahead of retention ([Zvi Mowshowitz](https://thezvi.substack.com/p/claude-mythos-51-and-fable-51-capabilities)). Anthropic says Fable 5.1 cut the classifier false-positive rate by at least 60%.
 3. **Retention.** The one that produces a hard no rather than a cost tradeoff, because a regulatory rule does not negotiate on price.
 
-And a measurement confound the summaries usually drop: Fable 5 shipped June 9, was suspended across all surfaces on June 12 under a US export-control directive, and only came back on July 1 ([GitHub Changelog editor's notes](https://github.blog/changelog/2026-06-09-claude-fable-5-is-generally-available-for-github-copilot/)). A frontier model's first three weeks are when platform teams run bake-offs and set defaults, and defaults are sticky. Fable 5 spent most of that window switched off.
+And a measurement confound the summaries usually drop: Fable 5 shipped June 9 and was suspended across all surfaces three days later. On June 12 the Commerce Department served Anthropic an export-control directive barring access by any foreign national, inside or outside the US. Anthropic had no way to verify nationality in real time, so it disabled both models for everyone ([Anthropic, Jun 12 2026](https://www.anthropic.com/news/fable-mythos-access)). Commerce withdrew the order on June 30 after validating a new classifier, and Fable 5 returned globally on July 1 ([Anthropic, Jul 1 2026](https://www.anthropic.com/news/redeploying-fable-5)). A frontier model's first three weeks are when platform teams run bake-offs and set defaults, and defaults are sticky. Fable 5 spent eighteen of those days switched off.
 
 So the clean version of the claim: retention was a real and probably decisive blocker for regulated buyers specifically, inside an adoption number that price and refusals and a three-week outage also explain. Do not attribute the whole 11.4% to privacy.
 
@@ -132,7 +140,7 @@ Facts from the public record, listed because most of them do not appear in eithe
 
 **Anthropic-specific:**
 
-- **The retention tail is two years, not 30 days.** Content flagged as violating the usage policy can be held up to two years. GitHub's changelog and Forrester both document this, and it is the number your records-retention schedule cares about, not the 30-day headline ([Forrester](https://www.forrester.com/blogs/how-fable-5-and-mythos-5-change-ai-security-data-retention-and-vendor-risk/)).
+- **The retention tail is two years, and seven for the scores.** Anthropic's published policy holds inputs and outputs up to two years, and trust-and-safety classification scores up to seven years, when a chat is flagged as violating the usage policy ([Anthropic Privacy Center](https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data)). Those are the numbers your records-retention schedule cares about, not the 30-day headline. Note also which path you are on is decided by the detector, not by you. And both figures describe Anthropic-held data under the June policy: nothing published says what the flagged path looks like once the bucket is yours, or whether the seven-year ceiling on scores survives EFS. Those scores are derived data about your content, so a seven-year tail on them is a durable record sitting outside your custody even in a design where the prompts never left. Ask.
 - **You absorb the triage labor.** Flags route to your team, so your SOC does the review Anthropic used to do. The Register calls this out directly: a compliance win that comes with monitoring chores ([The Register, Sep 2 2026](https://www.theregister.com/ai-and-ml/2026/09/02/anthropic-promises-zero-data-retention-but-customers-must-check-it-worked/5293789)). EFS is free from Anthropic and not free to operate. Budget analyst hours and an alert-routing path, plus cloud storage, reads, writes, and egress.
 - **You are running vendor code with decryption authority inside your account.** Sholto Douglas of Anthropic's technical staff described the monitoring as done via "automated systems we provide to you." If detection executes in your cloud account against your keys, it is a third-party supply-chain component in your security perimeter. Ask about the update channel, the change-approval path, the network egress it needs, and whether you can pin a version.
 - **The three components are independent, so verify what is actually on.** A customer can enable customer-owned storage without CMEK, or storage without fully automated review. The Register's framing is right: customers must check it worked.
@@ -153,7 +161,30 @@ Tier by consequence of disclosure, not by team or by how exciting the project is
 - **Move with controls:** customer-facing code and production systems where the data is proprietary but not access-restricted by law. Enable customer-owned storage and CMEK, route flags to a real on-call queue, and keep an inventory of which prompts touch which datasets.
 - **Wait:** anything under a rule that names who may see the content. Privileged legal material, material non-public information, drug-safety reports, patient data, and export-controlled technical data. Anthropic's own post names this category. For these, "no vendor human review" does not answer the question, because the rule is about who may read plaintext and the vendor's code still does.
 
-For the third tier, keep the workload on a non-covered model with a real ZDR contract until the white paper lands. Opus 4.8, Sonnet 4.6, and Haiku 4.5 all still operate under standard ZDR. The capability gap is real and it is smaller than the compliance gap.
+For the third tier, keep the workload on a non-covered model with a real ZDR contract until the white paper lands. Opus 5, Opus 4.8, Sonnet 4.6, and Haiku 4.5 all still operate under standard ZDR, and Opus 5 is the one to reach for first: it is the model that overtook Fable 5 in enterprise spend anyway. The capability gap is real and it is smaller than the compliance gap.
+
+That tiering only holds if the boundary is enforced somewhere other than a model picker. It is configured per surface, and the granularity differs enough to matter:
+
+| Surface | Scope of the retention switch |
+|---|---|
+| Claude API direct, and Claude Platform on AWS | Per workspace; your other workspaces keep ZDR |
+| Amazon Bedrock, Google Cloud Agent Platform | Per cloud environment; retained data stays with your provider |
+| Azure Foundry | Per Azure subscription; a ZDR subscription cannot be used, so you need a separate one |
+| Claude Code | Inherits the workspace or cloud credentials it runs under |
+| GitHub Copilot | Org setting, off by default, admin opt-in |
+
+The per-workspace granularity is the useful part, and it is why "we are a ZDR shop" and "we use covered models" are not mutually exclusive positions. Set the boundary once, at the workspace or subscription, and let routing follow it.
+
+The failure mode is loud, which is the right design. An organization whose retention configuration does not meet the requirement gets an error on a covered-model request rather than a silent downgrade:
+
+```json
+{
+  "type": "error",
+  "error": { "type": "invalid_request_error" }
+}
+```
+
+Handle it deliberately. Catch the 400 and fall back to a non-covered model, so a misconfigured workspace costs you a degraded answer instead of an unlogged compliance violation.
 
 ## What to ask before you sign
 
