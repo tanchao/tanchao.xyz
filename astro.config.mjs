@@ -21,7 +21,7 @@ export default defineConfig({
       themeCssSelector: (theme) =>
         theme.name === "github-dark" ? ".dark" : ":root:not(.dark)",
     }),
-    mdx(),
+    mdx({ gfm: true }),
     sitemap({
       filter: (page) => !page.includes("/feedback/"),
     }),
