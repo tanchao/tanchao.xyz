@@ -26,7 +26,7 @@ faq:
 
 Anthropic's Enterprise Frontier Safeguards and OpenAI's Private Safety Processing are the same architectural move: the customer keeps custody of the data, the vendor keeps the detection. Both companies split those two things rather than making the detection itself privacy-preserving. That unblocks a procurement conversation that had been stuck since June. It does not answer who reads plaintext.
 
-This is a read on what each vendor actually shipped, whether the problem is solved, and what a regulated buyer should still be asking.
+This is a read on what each vendor actually shipped, whether the problem is solved, and what a regulated buyer should still be asking. The companion on open weights is [Open weights dissolve ZDR. They do not replace EFS](/posts/2026/09/07/open-weights-do-not-give-you-efs/).
 
 ## The conflict, stated cleanly
 
