@@ -4,7 +4,7 @@ description: "Claude Code resolves skills enterprise → personal → project, w
 tldr: "Claude Code resolves skills enterprise over personal over project — the reverse of settings, where project outranks user. So an engineer's own skill silently shadows the team's, and governance that runs at commit time cannot see a conflict decided at load time."
 date: 2026-09-10
 tags: ["llm", "agents", "claude-code", "context-engineering", "engineering"]
-draft: true
+draft: false
 faq:
   - q: "What is the precedence order for Claude Code skills?"
     a: "Enterprise, then personal, then project, then nested subdirectory skills. Anthropic's documentation states it as 'Enterprise over personal, and personal over project.' This differs from settings precedence, which runs managed, command line, project local, shared project, user — where project outranks user. Skills invert the middle two tiers relative to settings."
