@@ -164,6 +164,12 @@ The concrete run is worth reading. In EnterpriseArena the agent makes monthly fi
 
 Two things I respect about how they report it. The best single round hit 95.0%, and they publish 85.0% instead, because "quoting the latter would amount to selecting on the test set." And with 20 episodes per split they say the accept/reject decisions "should be read as a search trace rather than as significance tests." Gains on HotpotQA are also flat, between −0.90 and +1.30 points, and they say so.
 
+A different group got to the same architecture three months earlier. [ProPlay](https://arxiv.org/abs/2606.12780) (June 11, 2026, Yijun Ma and colleagues, no Google involvement, [code released](https://github.com/antman9914/proplay)) also builds a procedure graph whose nodes are induced procedures and whose edges are causal transitions, also injected as soft guidance. Two unrelated teams landing on procedure-level graphs with non-binding guidance is a better signal than either paper alone.
+
+ProPlay ablates the part the Google paper only asserts. Replace soft guidance with a hard constraint the agent must follow, and results get worse; their conclusion is that the reasoning flexibility is necessary. The sharper version: two action-level world-model baselines fail to consistently beat plain ReAct, which they attribute to action-level constraints limiting the agent's reasoning. **Over-specifying the procedure is worse than not specifying it at all.** Both papers arrive at guidance that biases rather than dictates, from opposite directions.
+
+Two more ideas worth keeping. Each transition carries a *reliability record embedding* measuring how consistently it contributed to success on similar tasks, so a stored procedure has a confidence weight instead of being flatly true, and removing it measurably hurts. And the graph grows in two phases: nodes accumulate fast, then plateau while edges keep multiplying. Structure deepens after the vocabulary stops growing, which is a reassuring answer to whether this kind of state expands without bound.
+
 ## The dimensions
 
 The framework I was actually after. For any piece of agent state, these are the axes worth answering.
@@ -208,6 +214,7 @@ Also worth knowing before planning around it: the EU AI Act's Article 12 record-
 - **Recall is bought with tokens.** Extraction wins for small stable attribute sets, long context wins for open recall, and the cost crossover is around ten turns at 100k.
 - **More state in context is not better state.** The Procedural Graph ablation showed the localized subgraph beating the full graph on every benchmark, with the same graph and the same solver. Retrieve the neighborhood, not the map.
 - **Keep what did not work.** Rejection memory is the one form of state almost nobody keeps, and it is what stops a self-improving loop from re-proposing the same bad edit.
+- **Guide, do not dictate.** Two independent groups found that procedural state has to bias the next action rather than constrain it. Hard constraints underperform, and action-level ones lose to having no world model at all.
 
 The series thesis holds up here without modification. The orchestrator post argued that control has to live in the harness because the lead agent sees less than the harness does. State is the same shape. The model cannot be trusted to decide whether a tool call is a retry or a new action, cannot be trusted to preserve a constraint through its own summarization, and cannot hold a lock. Good intention will not work; mechanism does. The one inversion is dimension 3: the harness should own the state, and still show the model the handle.
 
