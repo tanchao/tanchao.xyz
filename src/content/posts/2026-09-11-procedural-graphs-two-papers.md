@@ -98,4 +98,4 @@ There is also a reassuring growth pattern. ProPlay's graph adds nodes quickly an
 - **Keep the failures.** Rejection memory and reliability records are both just state about what has not worked, and both earn their place.
 - **Two teams, one architecture.** Convergence three months apart on procedure graphs with non-binding guidance is better evidence than either paper's benchmark table.
 
-Both papers are early and their margins are small. What I take from them is not the numbers but the shape: a place to put the ordering knowledge, and the discipline to leave the agent free to ignore it.
+Both papers are early and most of their margins are small. One margin is not: 32.6 against 34.8. Write the ordering down, then leave the agent free to ignore it.

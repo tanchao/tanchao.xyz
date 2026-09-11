@@ -9,7 +9,7 @@ draft: false
 
 > Part of a series on structuring agentic systems. Previous: [The orchestrator is blind on purpose](/posts/2026/08/07/the-orchestrator-is-blind-on-purpose/).
 
-Notes to myself from a week of reading about how long-running agents keep track of what they are doing.
+Notes to myself from reading about how long-running agents keep track of what they are doing.
 
 The series so far has been about control. [Skills versus subagents](/posts/2026/07/27/skills-vs-subagents-when-to-use-each/) set the isolation baseline, the [verification loop](/posts/2026/07/28/make-an-agentic-workflow-deterministic-and-verifiable/) capped how many agents you can run, and [the orchestrator post](/posts/2026/08/07/the-orchestrator-is-blind-on-purpose/) argued that control has to live harness-side because the lead agent sees less than the harness does. This one is the same argument applied to state, and it lands in the same place for the same reason.
 
@@ -80,9 +80,9 @@ The reflex worry is that LLMs are nondeterministic and replay needs determinism.
 
 ## Correct rollback is not safe rollback
 
-I spent part of this week thinking the open problem was consistency between layers: what it means to rewind a conversation to turn 5 when the filesystem is at turn 12. That turns out to be a real problem with a paper from twelve days ago.
+The layers can disagree. Rewind a conversation to turn 5 while the filesystem is at turn 12, and the agent resumes believing something the disk contradicts.
 
-[Safe to Resume?](https://arxiv.org/abs/2608.29381) (August 29, 2026) states it better than I did:
+[Safe to Resume?](https://arxiv.org/abs/2608.29381) (August 29, 2026) puts the general case precisely:
 
 > Correct rollback does not imply secure recovery: a faithfully restored checkpoint may resume an execution whose states, assumptions, and external effects never coexisted in any valid history.
 
@@ -189,15 +189,15 @@ Also worth knowing before planning around it: the EU AI Act's Article 12 record-
 
 ## Key takeaways
 
-- **Name the state.** A connection is not a session, a stream is not a record, and an attempt is not an identity. MCP deleted sessions; A2A gave the Task an ID; Cursor split a durable agent from ephemeral runs. Everything durable gets an ID that survives both sides crashing.
-- **Make it visible to the model.** The instinct to hide plumbing is wrong here. A handle the model can pass, compose, and hand off beats state hidden in metadata.
-- **Single writer.** Four independent lines of evidence agree. Serialize on a conversation or task key, let unrelated keys run in parallel, and let extra agents contribute intelligence rather than actions.
-- **Classify state by loss tolerance before you compact it.** A safety rule and a debug log do not deserve the same summarizer. Pin the things that need exact wording.
-- **A checkpoint has a boundary and your side effects are outside it.** Derive idempotency keys from workflow position, never from model output, because a retrying agent re-reasons instead of resending.
-- **The tracker is a good system of record and a bad lock.** Every failure of the label-driven pattern reduces to a missing compare-and-set.
-- **Recall is bought with tokens.** Extraction wins for small stable attribute sets, long context wins for open recall, and the cost crossover is around ten turns at 100k.
-- **More state in context is not better state.** Same graph, same solver: showing the agent a localized neighborhood beat showing it everything, on every benchmark. Retrieve the neighborhood, not the map.
-- **Procedural state should guide, not bind.** It is the half nobody stores, and the [two papers on it](/posts/2026/09/11/procedural-graphs-two-papers/) agree that a plan the agent must obey is worse than no plan at all.
+Collapsed into the decisions I would actually make on a new system, in the order they bite:
+
+1. **Pick the concurrency key first.** It constrains the store, not the other way round. One writer per key; unrelated keys run free. Choosing a JSON blob before choosing the key means last-write-wins is the only semantics you can ever have.
+2. **Give every durable thing an ID, and show it to the model.** Not the connection, not the stream, not the attempt.
+3. **Sort state into three loss classes before you enable compaction.** Verbatim-required, paraphrasable, recomputable. Pin the first class out of the summarizer's reach, and confirm your platform lets you.
+4. **Assume the checkpoint stops at your process boundary.** Everything past it needs an idempotency key derived from workflow position, plus a plan for the effects you cannot take back.
+5. **Separate the record from the lock.** A tracker is excellent at the first and structurally incapable of the second.
+6. **Decide what you are buying with tokens.** Recall or cost, with a crossover you can compute rather than argue about.
+7. **Store the ordering, and let the agent overrule it.** Procedural state is [the half nobody keeps](/posts/2026/09/11/procedural-graphs-two-papers/), and a plan the agent must obey scores worse than no plan.
 
 The series thesis holds up here without modification. The orchestrator post argued that control has to live in the harness because the lead agent sees less than the harness does. State is the same shape. The model cannot be trusted to decide whether a tool call is a retry or a new action, cannot be trusted to preserve a constraint through its own summarization, and cannot hold a lock. Good intention will not work; mechanism does. The one inversion is dimension 3: the harness should own the state, and still show the model the handle.
 
