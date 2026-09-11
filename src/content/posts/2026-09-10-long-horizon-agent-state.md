@@ -7,7 +7,11 @@ tags: ["learning-notes", "ai", "agents", "distributed-systems", "engineering"]
 draft: true
 ---
 
+> Part of a series on structuring agentic systems. Previous: [The orchestrator is blind on purpose](/posts/2026/08/07/the-orchestrator-is-blind-on-purpose/).
+
 Notes to myself from a week of reading about how long-running agents keep track of what they are doing.
+
+The series so far has been about control. [Skills versus subagents](/posts/2026/07/27/skills-vs-subagents-when-to-use-each/) set the isolation baseline, the [verification loop](/posts/2026/07/28/make-an-agentic-workflow-deterministic-and-verifiable/) capped how many agents you can run, and [the orchestrator post](/posts/2026/08/07/the-orchestrator-is-blind-on-purpose/) argued that control has to live harness-side because the lead agent sees less than the harness does. This one is the same argument applied to state, and it lands in the same place for the same reason.
 
 The question I started with was practical. I run a pipeline where several agents work one task, and I use Jira labels as both the state store and the trigger. A cron job queries for tickets carrying a label, dispatches an agent, and the agent swaps the label when it finishes. It works. I wanted to know whether it was correct, and what the rest of the field had settled on.
 
@@ -168,6 +172,8 @@ Also worth knowing before planning around it: the EU AI Act's Article 12 record-
 - **A checkpoint has a boundary and your side effects are outside it.** Derive idempotency keys from workflow position, never from model output, because a retrying agent re-reasons instead of resending.
 - **The tracker is a good system of record and a bad lock.** Every failure of the label-driven pattern reduces to a missing compare-and-set.
 - **Recall is bought with tokens.** Extraction wins for small stable attribute sets, long context wins for open recall, and the cost crossover is around ten turns at 100k.
+
+The series thesis holds up here without modification. The orchestrator post argued that control has to live in the harness because the lead agent sees less than the harness does. State is the same shape. The model cannot be trusted to decide whether a tool call is a retry or a new action, cannot be trusted to preserve a constraint through its own summarization, and cannot hold a lock. Good intention will not work; mechanism does. The one inversion is dimension 3: the harness should own the state, and still show the model the handle.
 
 Most of this is 1985 coordination theory wearing new clothes. The CRDT papers cite Linda tuplespaces, blackboard architectures, and stigmergy, which is the right lineage. The one part that is actually new is that the participants forget on purpose, and nobody built the old systems to survive that.
 
