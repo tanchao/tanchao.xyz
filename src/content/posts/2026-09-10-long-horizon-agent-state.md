@@ -64,6 +64,20 @@ The generalization is the useful part. **Lossy compression gets applied uniforml
 
 There is a decision buried here that I have not seen anyone state. Anthropic's compaction block is readable and steerable, with an `instructions` field and a `pause_after_compaction` hook. OpenAI's compaction item is encrypted and documented as not intended to be human-interpretable. Constraint pinning only works if you can see and steer what the compactor keeps. The platform you pick decides whether the published fix is available to you.
 
+## Two ways to make a run durable
+
+Worth grounding, because "checkpoint" gets used for two different mechanisms.
+
+**Journal and replay.** Temporal, Restate, Inngest, Azure Durable Task, DBOS. Every step gets recorded. On crash, [Temporal re-executes the workflow function from the top](https://docs.temporal.io/ai) and returns recorded results for activities that already completed. [Restate replays the journal](https://docs.restate.dev/ai/patterns/durable-agents) without re-executing, then resumes at the first incomplete step. Your code re-runs; the side effects do not.
+
+**Checkpoint and resume.** LangGraph, Mastra, LlamaIndex, Cloudflare, Bedrock AgentCore. Save the state object, reload it, continue.
+
+Both camps land on the same two rules. Journal the model call, treating it as a side effect whose result is recorded rather than something to re-derive. And derive idempotency keys from workflow position, `{run_id}:{step_id}:{tool}`, never from model output.
+
+Two details that show what "durable" actually costs. Restate tells you to disable your agent SDK's tool parallelism, because completion order varies between runs and that corrupts the journal. And Temporal's OpenAI Agents integration [rejects the upstream `MemorySession`](https://docs.temporal.io/develop/typescript/integrations/openai-agents) outright, requiring `WorkflowSafeMemorySession` instead. A durable runtime will refuse a state object it cannot replay.
+
+The reflex worry is that LLMs are nondeterministic and replay needs determinism. In practice the real cost is versioning. Change a workflow while runs are in flight and you need Temporal's `patched()`, which has a documented failure where a missing marker returns `false` forever and silently takes the wrong branch. The common advice is to launch a new workflow type rather than migrate in place.
+
 ## Correct rollback is not safe rollback
 
 I spent part of this week thinking the open problem was consistency between layers: what it means to rewind a conversation to turn 5 when the filesystem is at turn 12. That turns out to be a real problem with a paper from twelve days ago.
