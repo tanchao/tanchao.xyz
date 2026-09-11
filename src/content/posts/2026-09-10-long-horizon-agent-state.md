@@ -148,27 +148,11 @@ The clincher: EverMemOS published single-hop 95.96% and multi-hop 91.37% against
 
 ## Procedural state is a different question
 
-Everything above about memory is about facts. [Procedural Graphs](https://arxiv.org/abs/2609.09153) (Yuxing Lu, Yicheng Chen, Shanchan Wu, Sercan Arık at Google, with Georgia Tech and Peking University, September 8, 2026) is about the other half, and the framing is clean:
+Everything above is about facts. The other half is procedural knowledge: what to do, in what order, under which conditions. Most agents never write it down, so it sits implicit in an accumulating history and rots along with it. That is why long runs lose track of objectives, call tools out of order, and repeat things that already failed.
 
-> Just as a knowledge graph organizes factual knowledge into (entity, relation, entity) triplets for what-is questions, a Procedural Graph organizes procedural knowledge into (procedure, relation, procedure) triplets for what-to-do questions.
+Two 2026 papers store it explicitly instead, as `(procedure, relation, procedure)` triplets mirroring a knowledge graph's `(entity, relation, entity)`. Their shared conclusion is that this state has to *suggest* rather than *bind*: in one ablation, forcing the agent to follow the plan scored below deleting the graph entirely.
 
-The failure modes it targets are the ones this whole note is about. As trajectories lengthen, agents lose track of objectives, invoke tools out of order, and repeat unproductive actions. The paper's diagnosis is that most agents leave procedural knowledge *implicit* in an accumulating history, so it degrades the way everything else in that history degrades.
-
-At each step the framework localizes the agent's active node, pulls the 2-hop neighborhood, and has a guidance model turn that subgraph into step-level advice that biases the next action without dictating it.
-
-**The ablation is the part I did not expect.** More state in context made it worse. Injecting the raw full graph helped structured dialogue (MultiChallenge 80.27 → 86.60) but *hurt* embodied execution (ALFWorld 72.58 → 70.34). Full-graph generative guidance dropped ALFWorld further, to 54.48, while spending more tokens. The localized subgraph beat every alternative on all three benchmarks. Same graph, same solver — the only variable was how much of it the agent saw at once.
-
-The loop that builds the graph is also state, of an unusual kind. A refiner contrasts failed trajectories with successful ones, proposes edits, and commits only when held-out validation does not drop. Rejected candidates go into a **rejection memory** so the refiner stops re-proposing them. That is durable state about what did not work, which nothing else in this note keeps.
-
-The concrete run is worth reading. In EnterpriseArena the agent makes monthly financial decisions for up to 132 months through three undisclosed crises. Capital arrives one to six months after you request it, so surviving a crisis means asking before you need it. The unguided Gemini 3.5 Flash baseline raised $0.00M and did not start early; the guided version raised $9.39M. Full-horizon survival went from 0.0% to 85.0% on test (Fisher's exact p=2.6×10⁻⁸).
-
-Two things I respect about how they report it. The best single round hit 95.0%, and they publish 85.0% instead, because "quoting the latter would amount to selecting on the test set." And with 20 episodes per split they say the accept/reject decisions "should be read as a search trace rather than as significance tests." Gains on HotpotQA are also flat, between −0.90 and +1.30 points, and they say so.
-
-A different group got to the same architecture three months earlier. [ProPlay](https://arxiv.org/abs/2606.12780) (June 11, 2026, Yijun Ma and colleagues, no Google involvement, [code released](https://github.com/antman9914/proplay)) also builds a procedure graph whose nodes are induced procedures and whose edges are causal transitions, also injected as soft guidance. Two unrelated teams landing on procedure-level graphs with non-binding guidance is a better signal than either paper alone.
-
-ProPlay ablates the part the Google paper only asserts. Replace soft guidance with a hard constraint the agent must follow, and results get worse; their conclusion is that the reasoning flexibility is necessary. The sharper version: two action-level world-model baselines fail to consistently beat plain ReAct, which they attribute to action-level constraints limiting the agent's reasoning. **Over-specifying the procedure is worse than not specifying it at all.** Both papers arrive at guidance that biases rather than dictates, from opposite directions.
-
-Two more ideas worth keeping. Each transition carries a *reliability record embedding* measuring how consistently it contributed to success on similar tasks, so a stored procedure has a confidence weight instead of being flatly true, and removing it measurably hurts. And the graph grows in two phases: nodes accumulate fast, then plateau while edges keep multiplying. Structure deepens after the vocabulary stops growing, which is a reassuring answer to whether this kind of state expands without bound.
+I wrote that up separately in [Procedural graphs: forcing the plan is worse than no plan](/posts/2026/09/10/procedural-graphs-two-papers/).
 
 ## The dimensions
 
@@ -193,7 +177,7 @@ Eleven of these are ordinary distributed-systems questions transposed onto a new
 
 Dimension 7 is the new one. Conventional systems do not lossily compress their own state, so there was never a reason to classify state by how much distortion it tolerates. Agents do it on every long session, by default, without telling you.
 
-One axis sits underneath all twelve: what kind of knowledge this is. Facts and procedures are both state, they fail differently, and a store built for one does not serve the other. Most of the memory industry is building for what-is. The what-to-do half is barely started.
+One axis sits underneath all twelve: what kind of knowledge this is. Facts and procedures are both state, they fail differently, and a store built for one does not serve the other. Most of the memory industry is building for what-is. The [what-to-do half](/posts/2026/09/10/procedural-graphs-two-papers/) is barely started.
 
 ## Three contradictions nobody has resolved
 
@@ -212,9 +196,8 @@ Also worth knowing before planning around it: the EU AI Act's Article 12 record-
 - **A checkpoint has a boundary and your side effects are outside it.** Derive idempotency keys from workflow position, never from model output, because a retrying agent re-reasons instead of resending.
 - **The tracker is a good system of record and a bad lock.** Every failure of the label-driven pattern reduces to a missing compare-and-set.
 - **Recall is bought with tokens.** Extraction wins for small stable attribute sets, long context wins for open recall, and the cost crossover is around ten turns at 100k.
-- **More state in context is not better state.** The Procedural Graph ablation showed the localized subgraph beating the full graph on every benchmark, with the same graph and the same solver. Retrieve the neighborhood, not the map.
-- **Keep what did not work.** Rejection memory is the one form of state almost nobody keeps, and it is what stops a self-improving loop from re-proposing the same bad edit.
-- **Guide, do not dictate.** Two independent groups found that procedural state has to bias the next action rather than constrain it. Hard constraints underperform, and action-level ones lose to having no world model at all.
+- **More state in context is not better state.** Same graph, same solver: showing the agent a localized neighborhood beat showing it everything, on every benchmark. Retrieve the neighborhood, not the map.
+- **Procedural state should guide, not bind.** It is the half nobody stores, and the [two papers on it](/posts/2026/09/10/procedural-graphs-two-papers/) agree that a plan the agent must obey is worse than no plan at all.
 
 The series thesis holds up here without modification. The orchestrator post argued that control has to live in the harness because the lead agent sees less than the harness does. State is the same shape. The model cannot be trusted to decide whether a tool call is a retry or a new action, cannot be trusted to preserve a constraint through its own summarization, and cannot hold a lock. Good intention will not work; mechanism does. The one inversion is dimension 3: the harness should own the state, and still show the model the handle.
 
