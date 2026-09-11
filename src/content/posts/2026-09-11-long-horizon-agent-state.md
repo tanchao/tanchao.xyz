@@ -2,9 +2,9 @@
 title: "Long-horizon agent state: the dimensions, and what moved in 2026"
 description: "A learning note from surveying how the field manages agent state across turns, sessions, sub-agents, tools, and multi-agent pipelines. Twelve dimensions worth naming, one axis the field only discovered this year, and a verdict on driving a pipeline off Jira labels."
 tldr: "Between January and August 2026 the field converged on three rules: writes stay single-threaded, state gets an explicit name instead of hiding in a connection, and reads stay idempotent. The genuinely new idea is loss tolerance — a safety rule and an episodic log compete for the same tokens, get summarized at the same rate, and only one of them still works afterwards. Everything else is distributed systems transposed."
-date: 2026-09-10
+date: 2026-09-11
 tags: ["learning-notes", "ai", "agents", "distributed-systems", "engineering"]
-draft: true
+draft: false
 ---
 
 > Part of a series on structuring agentic systems. Previous: [The orchestrator is blind on purpose](/posts/2026/08/07/the-orchestrator-is-blind-on-purpose/).
@@ -152,7 +152,7 @@ Everything above is about facts. The other half is procedural knowledge: what to
 
 Two 2026 papers store it explicitly instead, as `(procedure, relation, procedure)` triplets mirroring a knowledge graph's `(entity, relation, entity)`. Their shared conclusion is that this state has to *suggest* rather than *bind*: in one ablation, forcing the agent to follow the plan scored below deleting the graph entirely.
 
-I wrote that up separately in [Procedural graphs: forcing the plan is worse than no plan](/posts/2026/09/10/procedural-graphs-two-papers/).
+I wrote that up separately in [Procedural graphs: forcing the plan is worse than no plan](/posts/2026/09/11/procedural-graphs-two-papers/).
 
 ## The dimensions
 
@@ -177,7 +177,7 @@ Eleven of these are ordinary distributed-systems questions transposed onto a new
 
 Dimension 7 is the new one. Conventional systems do not lossily compress their own state, so there was never a reason to classify state by how much distortion it tolerates. Agents do it on every long session, by default, without telling you.
 
-One axis sits underneath all twelve: what kind of knowledge this is. Facts and procedures are both state, they fail differently, and a store built for one does not serve the other. Most of the memory industry is building for what-is. The [what-to-do half](/posts/2026/09/10/procedural-graphs-two-papers/) is barely started.
+One axis sits underneath all twelve: what kind of knowledge this is. Facts and procedures are both state, they fail differently, and a store built for one does not serve the other. Most of the memory industry is building for what-is. The [what-to-do half](/posts/2026/09/11/procedural-graphs-two-papers/) is barely started.
 
 ## Three contradictions nobody has resolved
 
@@ -197,7 +197,7 @@ Also worth knowing before planning around it: the EU AI Act's Article 12 record-
 - **The tracker is a good system of record and a bad lock.** Every failure of the label-driven pattern reduces to a missing compare-and-set.
 - **Recall is bought with tokens.** Extraction wins for small stable attribute sets, long context wins for open recall, and the cost crossover is around ten turns at 100k.
 - **More state in context is not better state.** Same graph, same solver: showing the agent a localized neighborhood beat showing it everything, on every benchmark. Retrieve the neighborhood, not the map.
-- **Procedural state should guide, not bind.** It is the half nobody stores, and the [two papers on it](/posts/2026/09/10/procedural-graphs-two-papers/) agree that a plan the agent must obey is worse than no plan at all.
+- **Procedural state should guide, not bind.** It is the half nobody stores, and the [two papers on it](/posts/2026/09/11/procedural-graphs-two-papers/) agree that a plan the agent must obey is worse than no plan at all.
 
 The series thesis holds up here without modification. The orchestrator post argued that control has to live in the harness because the lead agent sees less than the harness does. State is the same shape. The model cannot be trusted to decide whether a tool call is a retry or a new action, cannot be trusted to preserve a constraint through its own summarization, and cannot hold a lock. Good intention will not work; mechanism does. The one inversion is dimension 3: the harness should own the state, and still show the model the handle.
 

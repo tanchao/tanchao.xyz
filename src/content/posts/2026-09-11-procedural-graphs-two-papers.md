@@ -2,16 +2,16 @@
 title: "Procedural graphs: forcing the plan is worse than no plan"
 description: "A learning note from reading two papers that independently arrived at the same idea three months apart — storing an agent's what-to-do knowledge as an explicit graph. The ablation that matters is that binding the agent to the plan scored worse than giving it no graph at all."
 tldr: "Google's Procedural Graphs and the earlier ProPlay both store procedural knowledge as (procedure, relation, procedure) triplets and inject it as guidance that biases without dictating. Two ablations, from different teams, say the same thing: showing the agent less of the graph beats showing it all, and forcing the agent to follow the plan (32.6 success) scored below removing the graph entirely (34.8). Procedural state works by nudging."
-date: 2026-09-10
+date: 2026-09-11
 tags: ["learning-notes", "ai", "agents", "llm", "engineering"]
-draft: true
+draft: false
 ---
 
-> Part of a series on structuring agentic systems. Previous: [Long-horizon agent state](/posts/2026/09/10/long-horizon-agent-state/).
+> Part of a series on structuring agentic systems. Previous: [Long-horizon agent state](/posts/2026/09/11/long-horizon-agent-state/).
 
 Notes from reading two papers that landed on the same idea without citing each other as inspiration: [Procedural Graphs](https://arxiv.org/abs/2609.09153) (Google, Georgia Tech, Peking University; September 8, 2026) and [ProPlay](https://arxiv.org/abs/2606.12780) (Yijun Ma and colleagues; June 11, 2026, [code released](https://github.com/antman9914/proplay)).
 
-The [state survey](/posts/2026/09/10/long-horizon-agent-state/) that precedes this one covered factual memory. This is the other half.
+The [state survey](/posts/2026/09/11/long-horizon-agent-state/) that precedes this one covered factual memory. This is the other half.
 
 ## What procedural knowledge is, concretely
 
